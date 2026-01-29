@@ -12,6 +12,7 @@ class ProductsTable(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
 
     name = Column(String(255), nullable=False)
     description = Column(String(2048), nullable=True)
@@ -29,3 +30,4 @@ class ProductsTable(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     company = relationship("CompaniesTable", back_populates="products")
+    category = relationship("CategoriesTable", back_populates="products")
