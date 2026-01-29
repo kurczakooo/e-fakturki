@@ -1,7 +1,5 @@
 """Product API views."""
 
-from collections.abc import Sequence
-
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +16,7 @@ router = APIRouter()
 async def create_dummy(
     payload: ProductCreate,
     db_session: AsyncSession = Depends(get_db_session),
-) -> ProductsTable:
+) -> ProductRead:
     """
     Create a new product record.
 
@@ -32,7 +30,7 @@ async def create_dummy(
         name=payload.name,
         description=payload.description,
         sku=payload.sku,
-        category=payload.category,
+        category_id=payload.category_id,
         net_price=payload.net_price,
         tax_rate=payload.tax_rate,
         gross_price=payload.gross_price,
@@ -41,13 +39,13 @@ async def create_dummy(
     db_session.add(product)
     await db_session.flush()
     await db_session.refresh(product)
-    return product
+    return ProductRead.model_validate(product)
 
 
 @router.get("/products", response_model=list[ProductRead])
 async def get_all_dummy(
     db_session: AsyncSession = Depends(get_db_session),
-) -> Sequence[ProductsTable]:
+) -> list[ProductRead]:
     """
     Get all product records.
 
@@ -56,4 +54,6 @@ async def get_all_dummy(
     """
     statement = select(ProductsTable)
     result = await db_session.execute(statement)
-    return result.scalars().all()
+    products = result.scalars().all()
+
+    return [ProductRead.model_validate(p) for p in products]
