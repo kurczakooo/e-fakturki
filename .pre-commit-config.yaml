@@ -1,0 +1,46 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+    - repo: local
+      hooks:
+          # ---------- BACKEND ----------
+          - id: ruff-format-backend
+            name: Ruff format (backend)
+            entry: uv run ruff format
+            language: system
+            pass_filenames: false
+            always_run: true
+            files: ^apps/backend/
+
+          - id: ruff-backend
+            name: Ruff check (backend)
+            entry: uv run ruff
+            language: system
+            pass_filenames: false
+            always_run: true
+            args: ['check', 'apps/backend', 'tests']
+            files: ^apps/backend/
+
+          - id: mypy-backend
+            name: MyPy validate types (backend)
+            entry: uv run mypy
+            language: system
+            types: [python]
+            pass_filenames: false
+            args:
+                - 'apps/backend'
+                - 'tests'
+            files: ^apps/backend/
+
+          # ---------- FRONTEND ----------
+          - id: eslint-frontend
+            name: ESLint (frontend)
+            entry: npm run lint
+            language: system
+            files: ^apps/frontend/
+
+          - id: prettier-frontend
+            name: Prettier (frontend)
+            entry: npm run format
+            language: system
+            files: ^apps/frontend/
