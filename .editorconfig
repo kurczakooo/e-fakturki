@@ -29,3 +29,21 @@ indent_size = 2
 indent_style = space
 indent_size = 4
 ij_python_from_import_parentheses_force_if_multiline = true
+
+[*.vue]
+charset = utf-8
+indent_style = space
+indent_size = 2
+
+[*.{js,ts,jsx,tsx,vue,json,css,scss,html}]
+max_line_length = 100
+indent_style = space
+indent_size = 2
+
+[vite.config.*]
+indent_style = space
+indent_size = 2
+
+[*.{eslintrc,prettierrc}]
+indent_style = space
+indent_size = 2
