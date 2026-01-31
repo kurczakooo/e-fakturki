@@ -1,37 +1,39 @@
 repos:
-    - repo: local
-      hooks:
-          # ---------- BACKEND ----------
-          - id: ruff-format-backend
-            name: Ruff format (backend)
-            entry: bash -c "cd apps/backend && uv run ruff format"
-            language: system
-            pass_filenames: false
-            always_run: true
+  - repo: local
+    hooks:
+      # ---------- BACKEND ----------
+      - id: ruff-format-backend
+        name: Ruff format (backend)
+        entry: bash -c "cd apps/backend && uv run ruff format"
+        language: system
+        pass_filenames: false
+        always_run: true
 
-          - id: ruff-backend
-            name: Ruff check (backend)
-            entry: bash -c "cd apps/backend && uv run ruff check ."
-            language: system
-            pass_filenames: false
-            always_run: true
+      - id: ruff-backend
+        name: Ruff check (backend)
+        entry: bash -c "cd apps/backend && uv run ruff check ."
+        language: system
+        pass_filenames: false
+        always_run: true
 
-          - id: mypy-backend
-            name: MyPy validate types (backend)
-            entry: bash -c "cd apps/backend && uv run mypy ."
-            language: system
-            pass_filenames: false
-            always_run: true
+      - id: mypy-backend
+        name: MyPy validate types (backend)
+        entry: bash -c "cd apps/backend && uv run mypy ."
+        language: system
+        pass_filenames: false
+        always_run: true
 
-          # ---------- FRONTEND ----------
-          - id: eslint-frontend
-            name: ESLint (frontend)
-            entry: bash -c "cd apps/frontend && npm run lint"
-            language: system
-            files: ^apps/frontend/
+      # ---------- FRONTEND ----------
+      - id: prettier-frontend
+        name: Prettier (frontend)
+        entry: bash -c "cd apps/frontend && npm run format"
+        language: system
+        pass_filenames: false
+        always_run: true
 
-          - id: prettier-frontend
-            name: Prettier (frontend)
-            entry: bash -c "cd apps/frontend && npm run format"
-            language: system
-            files: ^apps/frontend/
+      - id: eslint-frontend
+        name: ESLint (frontend)
+        entry: bash -c "cd apps/frontend && npm run lint"
+        language: system
+        pass_filenames: false
+        always_run: true

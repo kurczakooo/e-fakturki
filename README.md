@@ -11,5 +11,7 @@ uv run -m backend
 how to run frontend
 
 ```bash
-
+cd apps/frontend
+npm install
+npm run dev
 ```
