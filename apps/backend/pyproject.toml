@@ -114,6 +114,7 @@ lint.ignore = [
 ]
 exclude = [
     "backend/db/migrations",
+    "backend/web/api/**/*.ipynb",
     ".venv/"
 ]
 lint.mccabe = { max-complexity = 10 }
