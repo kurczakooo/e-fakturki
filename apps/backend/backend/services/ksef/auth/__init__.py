@@ -1,1 +1,1 @@
-"""KSEF authorization services for backend."""
+"""KSeF authorization services for backend."""

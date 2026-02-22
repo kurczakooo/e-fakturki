@@ -17,6 +17,8 @@ dependencies = [
   "aiosqlite >=0.21.0,<1",
   "httptools >=0.7.1,<1",
   "pymongo >=4.15.4,<5",
+  "ksef_client >=0.3.1",
+  "python-multipart >=0.0.22"
 ]
 
 [dependency-groups]
@@ -99,6 +101,7 @@ lint.select = [ "E",     # Error
 	"UP",	 # Python updates
 ]
 lint.ignore = [
+    "E501",    # Line too long
     "D105",    # Missing docstring in magic method
     "D107",    # Missing docstring in __init__
     "B008",    # Do not perform function calls in argument defaults
