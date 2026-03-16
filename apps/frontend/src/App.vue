@@ -1,7 +1,3 @@
-<script setup lang="ts">
-import TempComponent from "./components/TempComponent.vue";
-</script>
+<script setup lang="ts"></script>
 
-<template>
-  <TempComponent msg="e-fakturka" />
-</template>
+<template></template>
