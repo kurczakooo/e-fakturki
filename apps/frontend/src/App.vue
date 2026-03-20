@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import LeftMenu from "./components/LeftMenu.vue";
 import { RouterView } from "vue-router";
+import LeftMenu from "./components/LeftMenu.vue";
 import TopBar from "./components/TopBar.vue";
+import LoginDialog from "./components/dialogs/LoginDialog.vue";
+import { Toast } from "primevue";
 </script>
 
 <template>
@@ -11,7 +13,9 @@ import TopBar from "./components/TopBar.vue";
       <LeftMenu />
       <!-- Main content area -->
       <div class="content-area">
+        <Toast />
         <RouterView />
+        <!-- <LoginDialog /> -->
       </div>
     </div>
   </div>

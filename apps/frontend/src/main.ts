@@ -3,6 +3,7 @@ import "./style.css";
 import { createApp } from "vue";
 
 import router from "./router";
+import { ToastService } from "primevue";
 
 import PrimeVue from "primevue/config";
 import Aura from "@primeuix/themes/aura";
@@ -34,12 +35,14 @@ const customPreset = definePreset(Aura, {
 
 const app = createApp(App);
 app.use(router);
+app.use(ToastService);
 app.use(PrimeVue, {
   theme: {
     preset: customPreset,
     options: {
       prefix: "prime",
-      darkModeSelector: ".prime-dark-mode",
+      //   darkModeSelector: ".prime-dark-mode",
+      darkModeSelector: "light",
     },
   },
   ripple: true, // Enable ripple effect for buttons globally

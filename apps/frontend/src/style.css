@@ -6,5 +6,26 @@
 }
 
 body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   padding: 1rem;
+}
+
+.main-container {
+  display: flex;
+  flex: 1;
+  padding-top: 1rem;
+}
+
+.content-area {
+  flex: 1;
+  padding-left: 1rem;
 }
