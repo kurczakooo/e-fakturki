@@ -28,8 +28,8 @@ onMounted(() => {
           :placeholder="selectedCompany"
         />
         <p>{{ User }}</p>
-        <Button icon="pi pi-user" variant="text" raised rounded />
-        <Button icon="pi pi-cog" variant="text" raised rounded />
+        <Button icon="pi pi-user" raised rounded />
+        <Button icon="pi pi-cog" raised rounded />
       </div>
     </template>
   </Toolbar>
