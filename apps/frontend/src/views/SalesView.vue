@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import InvoicesTable from "../components/InvoicesTable.vue";
+import InvoicesTable from "../components/invoices/InvoicesTable.vue";
 </script>
 
 <template>
