@@ -1,13 +1,13 @@
 import "./style.css";
 
 import { createApp } from "vue";
-
+import App from "./App.vue";
 import router from "./router";
-import { ToastService } from "primevue";
 
+import { ToastService } from "primevue";
 import PrimeVue from "primevue/config";
 import Aura from "@primeuix/themes/aura";
-import App from "./App.vue";
+import Tooltip from "primevue/tooltip";
 import { definePreset } from "@primeuix/themes";
 
 const customPreset = definePreset(Aura, {
@@ -41,11 +41,13 @@ app.use(PrimeVue, {
     preset: customPreset,
     options: {
       prefix: "prime",
-      //   darkModeSelector: ".prime-dark-mode",
-      darkModeSelector: "light",
+      darkModeSelector: ".prime-dark-mode",
+      //   darkModeSelector: "system",
     },
   },
   ripple: true, // Enable ripple effect for buttons globally
   inputVariant: "filled", // Set default input variant
 });
+app.directive("tooltip", Tooltip);
+
 app.mount("#app");
