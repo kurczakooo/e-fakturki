@@ -17,14 +17,15 @@ const initialValues = reactive({
 
 const resolver = zodResolver(
   z.object({
-    details: z.string().min(1, { message: "Details is required via Form Resolver." }),
+    firstname: z.string().min(1, { message: "Imię jest wymagane." }),
+
+    lastname: z.string().min(1, { message: "Nazwisko jest wymagane." }),
+
+    email: z.string().min(1, { message: "E-mail jest wymagany." }),
+
+    password: z.string().min(1, { message: "Hasło jest wymagane." }),
   }),
 );
-
-const zodUserNameResolver = zodResolver(z.string().min(1, { message: "Username is required." }));
-const zodFirstNameResolver = zodResolver(z.string().min(1, { message: "Name is required." }));
-const zodNameResolver = zodResolver(z.string().min(1, { message: "Last name is required." }));
-const zodPasswordResolver = zodResolver(z.string().min(1, { message: "Password is required." }));
 
 const onFormSubmit = ({ valid }) => {
   if (valid) {
@@ -54,67 +55,50 @@ const emit = defineEmits(["update:visible"]);
         @submit="onFormSubmit"
         class="flex flex-col gap-4 w-full sm:w-80"
       >
-        <FormField
-          v-slot="$field"
-          name="firstname"
-          initialValue=""
-          :resolver="zodFirstNameResolver"
-          class="flex flex-col gap-1"
-        >
+        <FormField v-slot="$field" name="firstname" class="flex flex-col gap-1">
           <FloatLabel variant="on">
-            <InputText id="imie_input" type="text" fluid />
-            <label for="imie_input">Imię</label>
+            <InputText v-bind="$field.props" id="name_input" type="text" fluid />
+            <label for="name_input">Imię</label>
           </FloatLabel>
           <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
             $field.error?.message
           }}</Message>
         </FormField>
-        <FormField
-          v-slot="$field"
-          name="lastname"
-          initialValue=""
-          :resolver="zodNameResolver"
-          class="flex flex-col gap-1"
-        >
+        <FormField v-slot="$field" name="lastname" class="flex flex-col gap-1">
           <FloatLabel variant="on">
-            <InputText id="nazwisko_input" type="text" fluid />
-            <label for="nazwisko_input">Nazwisko</label>
+            <InputText v-bind="$field.props" id="lastname_input" type="text" fluid />
+            <label for="lastname_input">Nazwisko</label>
           </FloatLabel>
           <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
             $field.error?.message
           }}</Message>
         </FormField>
-        <FormField
-          v-slot="$field"
-          name="email"
-          initialValue=""
-          :resolver="zodUserNameResolver"
-          class="flex flex-col gap-1"
-        >
+        <FormField v-slot="$field" name="email" class="flex flex-col gap-1">
           <FloatLabel variant="on">
-            <InputText id="email_input" type="text" fluid />
-            <label for="email_input">E-mail</label>
+            <InputText v-bind="$field.props" id="email_input" type="text" fluid />
+            <label for="email_input">E-mail (Opcjonalnie)</label>
           </FloatLabel>
           <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
             $field.error?.message
           }}</Message>
         </FormField>
-        <FormField
-          v-slot="$field"
-          name="password"
-          initialValue=""
-          :resolver="zodPasswordResolver"
-          class="flex flex-col gap-1"
-        >
+        <FormField v-slot="$field" name="password" class="flex flex-col gap-1">
           <FloatLabel variant="on">
-            <Password id="password_input" type="text" :feedback="false" toggleMask fluid />
-            <label for="password_input">Hasło</label>
+            <Password
+              v-bind="$field.props"
+              id="password_input"
+              type="text"
+              :feedback="false"
+              toggleMask
+              fluid
+            />
+            <label for="password_input">Hasło (Opcjonalnie)</label>
           </FloatLabel>
           <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
             $field.error?.message
           }}</Message>
         </FormField>
-        <Button type="submit" severity="secondary" label="Submit" />
+        <Button type="submit" severity="secondary" label="Dodaj użytkownika" />
       </Form>
     </div>
   </Dialog>
