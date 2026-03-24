@@ -12,7 +12,11 @@ import { reactive } from "vue";
 const toast = useToast();
 
 const initialValues = reactive({
-  details: "",
+  name: "",
+  nip: "",
+  street_and_number: "",
+  zipcode: "",
+  city: "",
 });
 
 const resolver = zodResolver(
@@ -61,12 +65,14 @@ const emit = defineEmits(["update:visible"]);
     @update:visible="emit('update:visible', $event)"
     modal
     :draggable="false"
-    :style="{ width: '40%' }"
+    :style="{ width: '30rem' }"
   >
     <template #header>
       <AppLogo />
     </template>
-    <span class="block mb-8">{{ "Dodaj firmę do użytkownika: Łukasz Kowalski" }}</span>
+    <span class="block mb-8 font-semibold">{{
+      "Dodaj firmę do użytkownika: Łukasz Kowalski"
+    }}</span>
     <div class="card flex justify-center">
       <Form
         :initialValues
