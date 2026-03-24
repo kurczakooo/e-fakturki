@@ -12,7 +12,10 @@ import { reactive } from "vue";
 const toast = useToast();
 
 const initialValues = reactive({
-  details: "",
+  firstname: "",
+  lastname: "",
+  email: "",
+  password: "",
 });
 
 const resolver = zodResolver(
@@ -42,7 +45,7 @@ const emit = defineEmits(["update:visible"]);
     @update:visible="emit('update:visible', $event)"
     modal
     :draggable="false"
-    :style="{ width: '40%' }"
+    :style="{ width: '30rem' }"
   >
     <template #header>
       <AppLogo />
@@ -76,7 +79,7 @@ const emit = defineEmits(["update:visible"]);
         <FormField v-slot="$field" name="email" class="flex flex-col gap-1">
           <FloatLabel variant="on">
             <InputText v-bind="$field.props" id="email_input" type="text" fluid />
-            <label for="email_input">E-mail (Opcjonalnie)</label>
+            <label for="email_input">E-mail</label>
           </FloatLabel>
           <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
             $field.error?.message
@@ -92,7 +95,7 @@ const emit = defineEmits(["update:visible"]);
               toggleMask
               fluid
             />
-            <label for="password_input">Hasło (Opcjonalnie)</label>
+            <label for="password_input">Hasło</label>
           </FloatLabel>
           <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
             $field.error?.message
