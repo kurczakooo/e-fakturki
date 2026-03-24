@@ -8,6 +8,7 @@ const items = [
     buyer: "Tech Solutions Sp. z o.o.",
     sum_gross: 1230.5,
     pay_status: "unpaid",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/2/26",
@@ -18,6 +19,7 @@ const items = [
     buyer: "ABC Logistics S.A.",
     sum_gross: 845.0,
     pay_status: "paid",
+    pay_type: "cash",
   },
   {
     inv_nr: "FV/3/26",
@@ -28,6 +30,7 @@ const items = [
     buyer: "Green Energy Polska Sp. z o.o.",
     sum_gross: 4520.9,
     pay_status: "paid",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/4/26",
@@ -38,6 +41,7 @@ const items = [
     buyer: "Nova Budownictwo Sp. z o.o.",
     sum_gross: 2100.0,
     pay_status: "unpaid",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/5/26",
@@ -48,6 +52,7 @@ const items = [
     buyer: "Digital Wave Sp. z o.o.",
     sum_gross: 999.99,
     pay_status: "partial",
+    pay_type: "cash",
   },
   {
     inv_nr: "FV/6/26",
@@ -58,6 +63,7 @@ const items = [
     buyer: "AutoParts Polska S.A.",
     sum_gross: 3210.75,
     pay_status: "paid",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/7/26",
@@ -68,6 +74,7 @@ const items = [
     buyer: "SmartHome Systems Sp. z o.o.",
     sum_gross: 540.2,
     pay_status: "unpaid",
+    pay_type: "cash",
   },
   {
     inv_nr: "FV/8/26",
@@ -78,6 +85,7 @@ const items = [
     buyer: "Global Trade Group Sp. z o.o.",
     sum_gross: 1820.4,
     pay_status: "partial",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/9/26",
@@ -88,6 +96,7 @@ const items = [
     buyer: "PolTech Industries Sp. z o.o.",
     sum_gross: 760.0,
     pay_status: "paid",
+    pay_type: "cash",
   },
   {
     inv_nr: "FV/10/26",
@@ -98,6 +107,7 @@ const items = [
     buyer: "BlueSky Marketing Sp. z o.o.",
     sum_gross: 1340.55,
     pay_status: "unpaid",
+    pay_type: "bank_transfer",
   },
 
   // nowe z KSeF
@@ -110,6 +120,7 @@ const items = [
     buyer: "Omega Consulting Sp. z o.o.",
     sum_gross: 2890.0,
     pay_status: "unpaid",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/12/26",
@@ -120,6 +131,7 @@ const items = [
     buyer: "Delta Systems S.A.",
     sum_gross: 1560.3,
     pay_status: "partial",
+    pay_type: "cash",
   },
   {
     inv_nr: "FV/13/26",
@@ -130,6 +142,7 @@ const items = [
     buyer: "Baltic Trade Sp. z o.o.",
     sum_gross: 980.0,
     pay_status: "unpaid",
+    pay_type: "cash",
   },
   {
     inv_nr: "FV/16/26",
@@ -140,6 +153,7 @@ const items = [
     buyer: "Nordic Energy Group Sp. z o.o.",
     sum_gross: 3050.5,
     pay_status: "partial",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/17/26",
@@ -150,6 +164,7 @@ const items = [
     buyer: "Sigma Logistics Sp. z o.o.",
     sum_gross: 1475.9,
     pay_status: "unpaid",
+    pay_type: "cash",
   },
 
   {
@@ -161,6 +176,7 @@ const items = [
     buyer: "Future IT Solutions Sp. z o.o.",
     sum_gross: 4120.75,
     pay_status: "paid",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/15/26",
@@ -171,6 +187,7 @@ const items = [
     buyer: "EcoBuild Polska Sp. z o.o.",
     sum_gross: 2200.0,
     pay_status: "unpaid",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/18/26",
@@ -181,6 +198,7 @@ const items = [
     buyer: "Vertex Media Sp. z o.o.",
     sum_gross: 690.0,
     pay_status: "partial",
+    pay_type: "cash",
   },
   {
     inv_nr: "FV/19/26",
@@ -191,6 +209,7 @@ const items = [
     buyer: "Quantum Robotics Sp. z o.o.",
     sum_gross: 5520.0,
     pay_status: "paid",
+    pay_type: "bank_transfer",
   },
   {
     inv_nr: "FV/20/26",
@@ -201,6 +220,7 @@ const items = [
     buyer: "Atlas Construction Sp. z o.o.",
     sum_gross: 1780.4,
     pay_status: "unpaid",
+    pay_type: "cash",
   },
 ];
 

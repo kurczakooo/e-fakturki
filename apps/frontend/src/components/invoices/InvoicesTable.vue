@@ -39,6 +39,10 @@ const ksefStatusHint = {
   accepted: "Faktura obecna w systemie KSeF",
 };
 // Invoice payment status
+const paymentType = {
+  bank_transfer: "Przelew",
+  cash: "Gotówka",
+};
 const paymentStatus = {
   paid: "Opłacono",
   partial: "Częściowo opłacono",
@@ -157,6 +161,11 @@ onMounted(() => {
           <span>PLN</span>
           <span class="font-semibold">{{ slotProps.data.sum_gross.toFixed(2) }}</span>
         </span>
+      </template>
+    </Column>
+    <Column field="pay_type" sortable header="Rodzaj płatności" style="width: 10%">
+      <template #body="slotProps">
+        <span class="font-semibold">{{ paymentType[slotProps.data.pay_type] }}</span>
       </template>
     </Column>
     <Column field="pay_status" sortable header="Status płatności" style="width: 15%">
