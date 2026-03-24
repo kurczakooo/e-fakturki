@@ -7,7 +7,7 @@ const appVer = ref("v0.1.0");
 
 <template>
   <div class="flex items-baseline gap-2">
-    <div class="flex text-3xl font-bold text-black">
+    <div class="flex text-3xl font-bold text-primary">
       {{ appName }}
     </div>
     <div class="flex font-semibold text-gray-500">
