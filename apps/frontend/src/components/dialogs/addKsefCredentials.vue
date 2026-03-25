@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import { Dialog, Button, InputText, Message, FloatLabel, FileUpload, Password } from "primevue";
-import { Form, FormField } from "@primevue/forms";
+import { Dialog, Button, Message, FloatLabel, Password } from "primevue";
+import { Form, FormField, type FormSubmitEvent } from "@primevue/forms";
 
 import { zodResolver } from "@primevue/forms/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "primevue/usetoast";
 
 import AppLogo from "../AppLogo.vue";
-import { reactive, ref } from "vue";
+import { ref } from "vue";
+import FileInput from "../inputs/fileInput.vue";
+import type { KsefCredentials } from "../../lib/types/ksef";
+
+const props = defineProps<{
+  visible: boolean;
+  companyName: string;
+}>();
 
 const toast = useToast();
-
-const initialValues = reactive({
-  ksef_password: "",
-});
 
 const resolver = zodResolver(
   z.object({
@@ -21,140 +24,91 @@ const resolver = zodResolver(
   }),
 );
 
-const onFormSubmit = ({ valid }) => {
-  if (valid) {
-    toast.add({ severity: "success", summary: "Form is submitted.", life: 3000 });
+const selectedCertFile = ref<File | null>(null);
+const selectedKeyFile = ref<File | null>(null);
+
+function handleSelectCert(file: File) {
+  selectedCertFile.value = file;
+}
+function handleClearCert() {
+  selectedCertFile.value = null;
+}
+function handleSelectKey(file: File) {
+  selectedKeyFile.value = file;
+}
+function handleClearKey() {
+  selectedKeyFile.value = null;
+}
+
+function areFilesSelected(): boolean {
+  if (!selectedCertFile.value || !selectedKeyFile.value) {
+    toast.add({
+      severity: "error",
+      summary: "Brak plików",
+      detail: "Dodaj certyfikat i klucz",
+      life: 3000,
+    });
+    return false;
   }
+  return true;
+}
+
+const onFormSubmit = (event: FormSubmitEvent) => {
+  const { valid, values } = event;
+  if (!valid) return;
+  if (!areFilesSelected()) return;
+
+  const payload: KsefCredentials = {
+    certFile: selectedCertFile.value,
+    keyFile: selectedKeyFile.value,
+    certPassword: (values as { ksef_password: string }).ksef_password,
+  };
+
+  console.log(payload);
 };
-
-const emit = defineEmits(["update:visible"]);
-
-const companyName = ref("Lukpol Warszawa");
-const isCertChosen = ref(false);
-const isKeyChosen = ref(false);
 </script>
 
 <template>
   <Dialog
-    :visible="true"
-    @update:visible="emit('update:visible', $event)"
+    :visible="props.visible"
     modal
+    :closable="false"
     :draggable="false"
     :style="{ width: '40rem' }"
   >
     <template #header>
       <AppLogo />
     </template>
-    <span class="block mb-8 font-semibold">{{
-      "Uwierzytelnij firmę " + companyName + " w systemie KSeF."
-    }}</span>
+    <span class="block mb-2 font-semibold">
+      Uwierzytelnij firmę {{ props.companyName }} w systemie KSeF.
+    </span>
+    <span class="block mb-5 text-sm text-gray-500">
+      Upewnij się, że przesłane pliki służą do autoryzacji w KSeF, a nie do podpisu offline.
+    </span>
     <div class="card flex justify-center">
-      <Form
-        :initialValues
-        :resolver
-        @submit="onFormSubmit"
-        class="flex flex-col gap-4 w-full sm:w-100"
-      >
-        <FormField v-slot="$field" name="name" class="flex flex-col gap-1">
-          <FileUpload
-            name="ksef_certificate"
-            :disabled="isCertChosen"
-            withCredentials
-            :showCancelButton="false"
-            :showUploadButton="false"
-            chooseLabel="Wybierz plik"
-            :multiple="false"
-            accept=".pfx,.crt,.cer"
-            :maxFileSize="1000000"
-            :fileLimit="1"
-            invalidFileTypeMessage="Błędny typ pliku. (Akceptowalne: *.crt, *.pfx, *.cer)"
-            @select="
-              () => {
-                isCertChosen = !isCertChosen;
-              }
-            "
-          >
-            <template #empty>
-              <span class="font-semibold"
-                >Przeciągnij i upuść certyfikat uwierzytelniający. (np. plik auth.crt)</span
-              >
-            </template>
-            <template #content="{ files }">
-              <div
-                v-for="file in files"
-                :key="file.name"
-                class="flex justify-between items-center w-full"
-              >
-                <div class="flex items-center gap-2">
-                  <i class="pi pi-file text-primary"></i>
-                  <span class="font-medium">{{ file.name }}</span>
-                </div>
-
-                <!-- Status + przycisk usuń -->
-                <div class="flex items-center gap-2">
-                  <span class="text-sm text-gray-500">Gotowy</span>
-                  <Button
-                    icon="pi pi-times"
-                    severity="danger"
-                    text
-                    @click="removeFileCallback(index)"
-                  />
-                </div>
-              </div>
-            </template>
-          </FileUpload>
-        </FormField>
-        <FormField v-slot="$field" name="nip" class="flex flex-col gap-1">
-          <FileUpload
-            name="ksef_key"
-            :disabled="isKeyChosen"
-            withCredentials
-            :showCancelButton="false"
-            :showUploadButton="false"
-            chooseLabel="Wybierz plik"
-            :multiple="false"
-            accept=".key"
-            :maxFileSize="1000000"
-            :fileLimit="1"
-            invalidFileTypeMessage="Błędny typ pliku. (Akceptowalne: *.key)"
-            @select="
-              () => {
-                isKeyChosen = !isKeyChosen;
-              }
-            "
-          >
-            <template #empty>
-              <span class="font-semibold"
-                >Przeciągnij i upuść klucz dla certyfikatu uwierzytelniającego. (np. plik
-                auth.key)</span
-              >
-            </template>
-            <template #content="{ files }">
-              <div
-                v-for="file in files"
-                :key="file.name"
-                class="flex justify-between items-center w-full"
-              >
-                <div class="flex items-center gap-2">
-                  <i class="pi pi-file text-primary"></i>
-                  <span class="font-medium">{{ file.name }}</span>
-                </div>
-
-                <!-- Status + przycisk usuń -->
-                <div class="flex items-center gap-2">
-                  <span class="text-sm text-gray-500">Gotowy</span>
-                  <Button
-                    icon="pi pi-times"
-                    severity="danger"
-                    text
-                    @click="removeFileCallback(index)"
-                  />
-                </div>
-              </div>
-            </template>
-          </FileUpload>
-        </FormField>
-        <FormField v-slot="$field" name="ksef_password" class="flex flex-col gap-1">
+      <Form :resolver @submit="onFormSubmit" class="flex flex-col gap-4 w-full sm:w-100">
+        <FileInput
+          acceptableFiles=".pfx,.crt,.cer"
+          credentials
+          :maxFileSize="1000000"
+          invalidFileTypeMessage="Błędny typ pliku. (Akceptowalne: *.crt, *.pfx, *.cer)"
+          dragAndDropMessage="Przeciągnij i upuść certyfikat uwierzytelniający. (np. plik auth.crt)"
+          fileIcon="pi-file-check"
+          @file-selected="handleSelectCert"
+          @file-removed="handleClearCert"
+        />
+        <FileInput
+          acceptableFiles=".key"
+          credentials
+          :maxFileSize="1000000"
+          invalidFileTypeMessage="Błędny typ pliku. (Akceptowalne: *.key)"
+          dragAndDropMessage="Przeciągnij i upuść klucz dla certyfikatu uwierzytelniającego. (np. plik
+                auth.key)"
+          fileIcon="pi-key"
+          @file-selected="handleSelectKey"
+          @file-removed="handleClearKey"
+        />
+        <FormField v-slot="$field" name="ksef_password" class="flex flex-col gap-1" initialValue="">
           <FloatLabel variant="on">
             <Password
               v-bind="$field.props"
@@ -170,7 +124,7 @@ const isKeyChosen = ref(false);
             $field.error?.message
           }}</Message>
         </FormField>
-        <Button type="submit" severity="secondary" label="Dodaj firmę" />
+        <Button type="submit" severity="secondary" label="Uwierzytelnij firmę w KSeF" />
       </Form>
     </div>
   </Dialog>
