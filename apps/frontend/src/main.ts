@@ -5,6 +5,8 @@ import App from "./App.vue";
 import router from "./router";
 
 import { ToastService } from "primevue";
+import { VueQueryPlugin } from "@tanstack/vue-query";
+
 import PrimeVue from "primevue/config";
 import Aura from "@primeuix/themes/aura";
 import Tooltip from "primevue/tooltip";
@@ -36,6 +38,7 @@ const customPreset = definePreset(Aura, {
 const app = createApp(App);
 app.use(router);
 app.use(ToastService);
+app.use(VueQueryPlugin);
 app.use(PrimeVue, {
   theme: {
     preset: customPreset,
