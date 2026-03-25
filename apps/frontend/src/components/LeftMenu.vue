@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
-
 import { Menu, Badge } from "primevue";
-
-function toggleDarkMode() {
-  document.documentElement.classList.toggle("prime-dark-mode");
-}
+import { toggleDarkMode } from "../lib/utils";
 
 const items = ref([
   {
@@ -53,11 +49,11 @@ const items = ref([
   {
     label: "Aplikacja",
     items: [
-      //   {
-      //     label: "Tryb",
-      //     icon: "pi pi-sun",
-      //     command: toggleDarkMode,
-      //   },
+      {
+        label: "Tryb",
+        icon: "pi pi-sun",
+        command: toggleDarkMode,
+      },
       {
         label: "Ustawienia",
         icon: "pi pi-cog",

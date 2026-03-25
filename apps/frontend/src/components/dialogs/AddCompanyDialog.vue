@@ -64,6 +64,7 @@ const emit = defineEmits(["update:visible"]);
     :visible="true"
     @update:visible="emit('update:visible', $event)"
     modal
+    :closable="false"
     :draggable="false"
     :style="{ width: '30rem' }"
   >
