@@ -1,11 +1,14 @@
 export interface AddressCreationRequest {
-  companyId: number;
-  street_and_number: string;
-  zipcode: string;
+  company_id: number;
+  type: "registered" | "correspondence";
+  country: string;
   city: string;
+  postal_code: string;
+  street: string;
+  building_number: string;
 }
 
 export interface AddressCreationResponse {
-  companyId: number;
-  addressId: number;
+  company_id: number;
+  address_id: number;
 }

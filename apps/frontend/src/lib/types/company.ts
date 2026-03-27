@@ -1,11 +1,12 @@
 export interface CompanyCreationRequest {
-  userId: number;
+  user_id: number;
   name: string;
   nip: string;
-  krs?: string;
-  regon?: string;
+  krs: string | null;
+  regon: string | null;
 }
 
 export interface CompanyCreationResponse {
-  companyId: number;
+  user_id: number;
+  company_id: number;
 }
