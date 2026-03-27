@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { Dialog, Button, InputText, Message, FloatLabel } from "primevue";
 import { Form, FormField, type FormSubmitEvent } from "@primevue/forms";
-
 import { zodResolver } from "@primevue/forms/resolvers/zod";
-import { z } from "zod";
+import { useMutation } from "@tanstack/vue-query";
 import { useToast } from "primevue/usetoast";
+import { reactive } from "vue";
+import { z } from "zod";
 
 import AppLogo from "../AppLogo.vue";
-import { reactive } from "vue";
-
 import { createCompany } from "../../lib/services/companyService";
 import { createAddress } from "../../lib/services/addressService";
+import { useCurrentUserStore } from "../../stores/currentUserStore";
 
 const props = defineProps<{
   user: string;
@@ -18,13 +18,15 @@ const props = defineProps<{
 }>();
 
 const toast = useToast();
+const currentUserStore = useCurrentUserStore();
 
 const initialValues = reactive({
   name: "",
   nip: "",
   krs: "",
   regon: "",
-  street_and_number: "",
+  street: "ul.",
+  number: "",
   zipcode: "",
   city: "",
 });
@@ -45,10 +47,19 @@ const resolver = zodResolver(
     regon: z.string().refine((val) => val === "" || /^(\d{9}|\d{14})$/.test(val), {
       message: "REGON musi mieć 9 lub 14 cyfr lub pozostać pusty",
     }),
-    street_and_number: z
+    street: z
       .string()
-      .min(1, { message: "Adres jest wymagany." })
-      .min(5, { message: "Podaj pełny adres (ulica i numer)." }),
+      .min(4, { message: "Ulica jest wymagana." })
+      .regex(/^ul\..+/, {
+        message: "Ulica musi zaczynać się od 'ul.' (np. ul.Kwiatowa)",
+      }),
+    number: z
+      .string()
+      .min(1, { message: "Numer jest wymagany." })
+      .max(10, { message: "Numer może mieć maksymalnie 10 znaków." })
+      .regex(/^[0-9A-Za-z\/]+$/, {
+        message: "Numer może zawierać tylko cyfry, litery i znak '/'.",
+      }),
     zipcode: z
       .string()
       .min(1, { message: "Kod pocztowy jest wymagany." })
@@ -62,30 +73,43 @@ const resolver = zodResolver(
   }),
 );
 
+const createCompanyWithAddressMutation = useMutation({
+  mutationFn: async (values: any) => {
+    const companyResp = await createCompany({
+      user_id: 1,
+      name: values.name,
+      nip: values.nip,
+      krs: values.krs == "" ? null : values.krs,
+      regon: values.regon == "" ? null : values.regon,
+    });
+
+    const addressResp = await createAddress({
+      company_id: companyResp.company_id,
+      type: "registered",
+      country: "Poland",
+      city: values.city,
+      postal_code: values.zipcode,
+      street: values.street,
+      building_number: values.number,
+    });
+    return { companyResp, addressResp };
+  },
+
+  onSuccess: (data, variables) => {
+    toast.add({ severity: "success", summary: "Firma i adres dodane pomyślnie!", life: 3000 });
+    currentUserStore.setCompanyData(data.companyResp.company_id, variables.name);
+  },
+
+  onError: () => {
+    toast.add({ severity: "error", summary: "Coś poszło nie tak", life: 3000 });
+  },
+});
+
 const onFormSubmit = async (event: FormSubmitEvent) => {
   const { valid } = event;
   if (!valid) return;
 
-  try {
-    const companyResp = await createCompany({
-      userId: 1,
-      name: event.values.name,
-      nip: event.values.nip,
-      krs: event.values.krs,
-      regon: event.values.regon,
-    });
-
-    const addressResp = await createAddress({
-      companyId: companyResp.companyId,
-      street_and_number: event.values.street_and_number,
-      zipcode: event.values.zipcode,
-      city: event.values.city,
-    });
-
-    toast.add({ severity: "success", summary: "Firma i adres dodane pomyślnie!", life: 3000 });
-  } catch (err) {
-    toast.add({ severity: "error", summary: "Coś poszło nie tak", life: 3000 });
-  }
+  createCompanyWithAddressMutation.mutate(event.values);
 };
 
 const emit = defineEmits(["update:visible"]);
@@ -98,7 +122,7 @@ const emit = defineEmits(["update:visible"]);
     modal
     :closable="false"
     :draggable="false"
-    :style="{ width: '30rem' }"
+    :style="{ width: '40rem' }"
   >
     <template #header>
       <AppLogo />
@@ -109,78 +133,106 @@ const emit = defineEmits(["update:visible"]);
         :initialValues
         :resolver
         @submit="onFormSubmit"
-        class="flex flex-col gap-4 w-full sm:w-80"
+        class="flex flex-col gap-4 w-full items-center sm:w-150"
       >
-        <FormField v-slot="$field" name="name" class="flex flex-col gap-1">
-          <FloatLabel variant="on">
-            <InputText v-bind="$field.props" id="name_input" type="text" fluid />
-            <label for="name_input">Nazwa firmy</label>
-          </FloatLabel>
-          <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
-            $field.error?.message
-          }}</Message>
-        </FormField>
-        <FormField v-slot="$field" name="nip" class="flex flex-col gap-1">
-          <FloatLabel variant="on">
-            <InputText v-bind="$field.props" id="nip_input" type="text" fluid />
-            <label for="nip_input">NIP Firmy</label>
-          </FloatLabel>
-          <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
-            $field.error?.message
-          }}</Message>
-        </FormField>
-        <FormField v-slot="$field" name="krs" class="flex flex-col gap-1">
-          <FloatLabel variant="on">
-            <InputText v-bind="$field.props" id="krs_input" type="text" fluid />
-            <label for="krs_input">KRS Firmy (Opcjonalnie)</label>
-          </FloatLabel>
-          <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
-            $field.error?.message
-          }}</Message>
-        </FormField>
-        <FormField v-slot="$field" name="regon" class="flex flex-col gap-1">
-          <FloatLabel variant="on">
-            <InputText v-bind="$field.props" id="regon_input" type="text" fluid />
-            <label for="regon_input">REGON Firmy (Opcjonalnie)</label>
-          </FloatLabel>
-          <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
-            $field.error?.message
-          }}</Message>
-        </FormField>
-        <FormField v-slot="$field" name="street_and_number" class="flex flex-col gap-1">
-          <FloatLabel variant="on">
-            <InputText v-bind="$field.props" id="street_and_number_input" type="text" fluid />
-            <label for="street_and_number_input">Ulica i nr</label>
-          </FloatLabel>
-          <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
-            $field.error?.message
-          }}</Message>
-        </FormField>
-        <FormField v-slot="$field" name="zipcode" class="flex flex-col gap-1">
-          <FloatLabel variant="on">
-            <InputText
-              v-bind="$field.props"
-              id="zipcode_input"
-              type="text"
-              :feedback="false"
-              fluid
-            />
-            <label for="zipcode_input">Kod pocztowy</label>
-          </FloatLabel>
-          <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
-            $field.error?.message
-          }}</Message>
-        </FormField>
-        <FormField v-slot="$field" name="city" class="flex flex-col gap-1">
-          <FloatLabel variant="on">
-            <InputText v-bind="$field.props" id="city_input" type="text" :feedback="false" fluid />
-            <label for="city_input">Miasto</label>
-          </FloatLabel>
-          <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
-            $field.error?.message
-          }}</Message>
-        </FormField>
-        <Button type="submit" severity="secondary" label="Dodaj firmę" />
+        <div class="flex gap-4 w-full">
+          <div class="flex flex-col gap-4 w-full">
+            <FormField v-slot="$field" name="name" class="flex flex-col gap-1">
+              <FloatLabel variant="on">
+                <InputText v-bind="$field.props" id="name_input" type="text" fluid />
+                <label for="name_input">Nazwa firmy</label>
+              </FloatLabel>
+              <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
+                $field.error?.message
+              }}</Message>
+            </FormField>
+            <FormField v-slot="$field" name="nip" class="flex flex-col gap-1">
+              <FloatLabel variant="on">
+                <InputText v-bind="$field.props" id="nip_input" type="text" fluid />
+                <label for="nip_input">NIP Firmy</label>
+              </FloatLabel>
+              <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
+                $field.error?.message
+              }}</Message>
+            </FormField>
+            <FormField v-slot="$field" name="krs" class="flex flex-col gap-1">
+              <FloatLabel variant="on">
+                <InputText v-bind="$field.props" id="krs_input" type="text" fluid />
+                <label for="krs_input">KRS Firmy (Opcjonalnie)</label>
+              </FloatLabel>
+              <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
+                $field.error?.message
+              }}</Message>
+            </FormField>
+            <FormField v-slot="$field" name="regon" class="flex flex-col gap-1">
+              <FloatLabel variant="on">
+                <InputText v-bind="$field.props" id="regon_input" type="text" fluid />
+                <label for="regon_input">REGON Firmy (Opcjonalnie)</label>
+              </FloatLabel>
+              <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
+                $field.error?.message
+              }}</Message>
+            </FormField>
+          </div>
+          <div class="flex flex-col gap-4 w-full">
+            <FormField v-slot="$field" name="street" class="flex flex-col gap-1">
+              <FloatLabel variant="on">
+                <InputText v-bind="$field.props" id="street_input" type="text" fluid />
+                <label for="street_input">Ulica</label>
+              </FloatLabel>
+              <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
+                $field.error?.message
+              }}</Message>
+            </FormField>
+            <FormField v-slot="$field" name="number" class="flex flex-col gap-1">
+              <FloatLabel variant="on">
+                <InputText v-bind="$field.props" id="building_number_input" type="text" fluid />
+                <label for="building_number_input">Numer budynku</label>
+              </FloatLabel>
+              <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
+                $field.error?.message
+              }}</Message>
+            </FormField>
+            <FormField v-slot="$field" name="zipcode" class="flex flex-col gap-1">
+              <FloatLabel variant="on">
+                <InputText
+                  v-bind="$field.props"
+                  id="zipcode_input"
+                  type="text"
+                  :feedback="false"
+                  fluid
+                />
+                <label for="zipcode_input">Kod pocztowy</label>
+              </FloatLabel>
+              <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
+                $field.error?.message
+              }}</Message>
+            </FormField>
+            <FormField v-slot="$field" name="city" class="flex flex-col gap-1">
+              <FloatLabel variant="on">
+                <InputText
+                  v-bind="$field.props"
+                  id="city_input"
+                  type="text"
+                  :feedback="false"
+                  fluid
+                />
+                <label for="city_input">Miasto</label>
+              </FloatLabel>
+              <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">{{
+                $field.error?.message
+              }}</Message>
+            </FormField>
+          </div>
+        </div>
+        <Button
+          type="submit"
+          severity="secondary"
+          label="Dodaj firmę"
+          :loading="createCompanyWithAddressMutation.isPending.value"
+          :disabled="createCompanyWithAddressMutation.isPending.value"
+          class="sm:w-100"
+        />
       </Form>
     </div>
   </Dialog>
