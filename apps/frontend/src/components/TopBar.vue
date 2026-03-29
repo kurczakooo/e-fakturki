@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-
-import AppLogo from "./AppLogo.vue";
+import { computed } from "vue";
 
 import { Toolbar, Select, Button } from "primevue";
 
-const User = ref<string>("Łukasz Kowalski");
-const companiesOptions = ["Lukpol Warszawa", "Lukpol Kielce", "Lukpol Radom"];
-const selectedCompany = ref<string | undefined>("");
+import AppLogo from "./AppLogo.vue";
+import { useCurrentUserStore } from "../stores/currentUserStore";
 
-onMounted(() => {
-  selectedCompany.value = companiesOptions[0];
-});
+const currentUserStore = useCurrentUserStore();
+
+const companyName = computed(() => currentUserStore.getCompanyName);
+const userName = computed(() => currentUserStore.getFullName);
 </script>
 
 <template>
@@ -22,12 +20,8 @@ onMounted(() => {
 
     <template #end>
       <div class="flex items-center gap-4">
-        <Select
-          v-model="selectedCompany"
-          :options="companiesOptions"
-          :placeholder="selectedCompany"
-        />
-        <p>{{ User }}</p>
+        <Select :placeholder="companyName ? companyName : 'Wybierz firmę'" />
+        <p>{{ userName ? userName : "Zaloguj się" }}</p>
         <Button icon="pi pi-user" raised rounded />
         <Button icon="pi pi-cog" raised rounded />
       </div>

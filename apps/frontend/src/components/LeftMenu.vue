@@ -68,12 +68,6 @@ const items = ref([
 <template>
   <div class="card flex h-full">
     <Menu :model="items" class="w-full md:w-60 h-full">
-      <!-- <template #start>
-        <div class="inline-flex items-center gap-1 px-2 py-2">
-          <Button label="Nowa faktura" icon="pi pi-plus" />
-        </div>
-      </template> -->
-
       <template #item="{ item, props }">
         <router-link
           v-if="item.route"
