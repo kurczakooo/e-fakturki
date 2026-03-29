@@ -4,7 +4,7 @@ import { Form, FormField, type FormSubmitEvent } from "@primevue/forms";
 import { zodResolver } from "@primevue/forms/resolvers/zod";
 import { useMutation } from "@tanstack/vue-query";
 import { useToast } from "primevue/usetoast";
-import { reactive } from "vue";
+import { computed, reactive } from "vue";
 import { z } from "zod";
 
 import AppLogo from "../AppLogo.vue";
@@ -13,7 +13,6 @@ import { createAddress } from "../../lib/services/addressService";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
 
 const props = defineProps<{
-  user: string;
   visible: boolean;
 }>();
 
@@ -113,6 +112,8 @@ const onFormSubmit = async (event: FormSubmitEvent) => {
 };
 
 const emit = defineEmits(["update:visible"]);
+
+const userName = computed(() => currentUserStore.getFullName);
 </script>
 
 <template>
@@ -127,7 +128,7 @@ const emit = defineEmits(["update:visible"]);
     <template #header>
       <AppLogo />
     </template>
-    <span class="block mb-5 font-semibold"> Dodaj firmę użytkownika: {{ props.user }} </span>
+    <span class="block mb-5 font-semibold"> Dodaj firmę użytkownika: {{ userName }} </span>
     <div class="card flex justify-center">
       <Form
         :initialValues

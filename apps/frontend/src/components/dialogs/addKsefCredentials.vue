@@ -54,14 +54,14 @@ function areFilesSelected(): boolean {
 }
 
 const onFormSubmit = (event: FormSubmitEvent) => {
-  const { valid, values } = event;
+  const { valid } = event;
   if (!valid) return;
   if (!areFilesSelected()) return;
 
   const payload: KsefCredentials = {
     certFile: selectedCertFile.value,
     keyFile: selectedKeyFile.value,
-    certPassword: (values as { ksef_password: string }).ksef_password,
+    certPassword: event.values.ksef_password,
   };
 
   console.log(payload);
