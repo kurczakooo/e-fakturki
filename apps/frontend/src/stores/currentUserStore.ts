@@ -10,15 +10,23 @@ export const useCurrentUserStore = defineStore("currentUser", {
 
       companyId: null as number | null,
       companyName: null as string | null,
+      companyKsefAuthorized: false as boolean | null,
     };
   },
   getters: {
     getUserId: (state) => state.userId,
     getName: (state) => state.name,
     getLastname: (state) => state.lastname,
+    getFullName: (state) => {
+      if (state.name && state.lastname) {
+        return `${state.name} ${state.lastname}`;
+      }
+      return null;
+    },
     getEmail: (state) => state.email,
     getCompanyId: (state) => state.companyId,
     getCompanyName: (state) => state.companyName,
+    isCompanyKsefAuthorized: (state) => state.companyKsefAuthorized,
   },
   actions: {
     setUserData(userId: number, name: string, lastname: string, email: string) {
@@ -27,9 +35,13 @@ export const useCurrentUserStore = defineStore("currentUser", {
       this.lastname = lastname;
       this.email = email;
     },
-    setCompanyData(companyId: number, companyName: string) {
+    setCompanyData(companyId: number, companyName: string, companyKsefAuthorized: boolean) {
       this.companyId = companyId;
       this.companyName = companyName;
+      this.companyKsefAuthorized = companyKsefAuthorized;
+    },
+    setCompanyKsefAuthorizationStatus(status: boolean) {
+      this.companyKsefAuthorized = status;
     },
   },
 });
