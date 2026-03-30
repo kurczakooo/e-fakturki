@@ -33,8 +33,15 @@ const isFileChosen = ref(false);
     :invalidFileTypeMessage="props.invalidFileTypeMessage"
     @select="
       (event) => {
+        if (!event.files || event.files.length === 0) return;
+
         isFileChosen = true;
         emit('file-selected', event.files[0]);
+      }
+    "
+    @error="
+      () => {
+        isFileChosen = false;
       }
     "
   >
