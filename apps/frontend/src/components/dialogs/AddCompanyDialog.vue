@@ -12,10 +12,6 @@ import { createCompany } from "../../lib/services/companyService";
 import { createAddress } from "../../lib/services/addressService";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
 
-const props = defineProps<{
-  visible: boolean;
-}>();
-
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
 
@@ -96,7 +92,7 @@ const createCompanyWithAddressMutation = useMutation({
 
   onSuccess: (data, variables) => {
     toast.add({ severity: "success", summary: "Firma i adres dodane pomyślnie!", life: 3000 });
-    currentUserStore.setCompanyData(data.companyResp.company_id, variables.name);
+    currentUserStore.setCompanyData(data.companyResp.company_id, variables.name, false);
   },
 
   onError: () => {
@@ -111,20 +107,11 @@ const onFormSubmit = async (event: FormSubmitEvent) => {
   createCompanyWithAddressMutation.mutate(event.values);
 };
 
-const emit = defineEmits(["update:visible"]);
-
 const userName = computed(() => currentUserStore.getFullName);
 </script>
 
 <template>
-  <Dialog
-    :visible="props.visible"
-    @update:visible="emit('update:visible', $event)"
-    modal
-    :closable="false"
-    :draggable="false"
-    :style="{ width: '40rem' }"
-  >
+  <Dialog :visible="true" modal :closable="false" :draggable="false" :style="{ width: '40rem' }">
     <template #header>
       <AppLogo />
     </template>

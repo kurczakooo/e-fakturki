@@ -1,28 +1,56 @@
 <script setup lang="ts">
 import { Dialog, Button, Message, FloatLabel, Password } from "primevue";
 import { Form, FormField, type FormSubmitEvent } from "@primevue/forms";
-
 import { zodResolver } from "@primevue/forms/resolvers/zod";
-import { z } from "zod";
+import { useMutation } from "@tanstack/vue-query";
 import { useToast } from "primevue/usetoast";
+import { computed, ref } from "vue";
+import { z } from "zod";
 
 import AppLogo from "../AppLogo.vue";
-import { ref } from "vue";
 import FileInput from "../inputs/fileInput.vue";
 import type { KsefCredentials } from "../../lib/types/ksef";
-
-const props = defineProps<{
-  visible: boolean;
-  companyName: string;
-}>();
+import { useCurrentUserStore } from "../../stores/currentUserStore";
+import { createKsefCredentials } from "../../lib/services/ksefService";
 
 const toast = useToast();
+const currentUserStore = useCurrentUserStore();
 
 const resolver = zodResolver(
   z.object({
     ksef_password: z.string().min(1, { message: "Hasło jest wymagane." }),
   }),
 );
+
+const createKsefCredsMutation = useMutation({
+  mutationFn: async (values: any) => {
+    const companyId = currentUserStore.getCompanyId;
+    if (!companyId) {
+      throw new Error("Brak companyId");
+    }
+
+    return await createKsefCredentials({
+      company_id: companyId,
+      certificates_for_auth: true,
+      certificate: values.certFile,
+      private_key: values.keyFile,
+      password: values.certPassword,
+    });
+  },
+
+  onSuccess: () => {
+    toast.add({
+      severity: "success",
+      summary: "Poprawnie uwierzytelniono firmę w KSeF!",
+      life: 3000,
+    });
+    currentUserStore.setCompanyKsefAuthorizationStatus(true);
+  },
+
+  onError: () => {
+    toast.add({ severity: "error", summary: "Coś poszło nie tak", life: 3000 });
+  },
+});
 
 const selectedCertFile = ref<File | null>(null);
 const selectedKeyFile = ref<File | null>(null);
@@ -64,26 +92,30 @@ const onFormSubmit = (event: FormSubmitEvent) => {
     certPassword: event.values.ksef_password,
   };
 
-  console.log(payload);
+  createKsefCredsMutation.mutate(payload);
 };
+
+const companyName = computed(() => currentUserStore.getCompanyName);
 </script>
 
 <template>
-  <Dialog
-    :visible="props.visible"
-    modal
-    :closable="false"
-    :draggable="false"
-    :style="{ width: '40rem' }"
-  >
+  <Dialog :visible="true" modal :closable="false" :draggable="false" :style="{ width: '40rem' }">
     <template #header>
       <AppLogo />
     </template>
     <span class="block mb-2 font-semibold">
-      Uwierzytelnij firmę {{ props.companyName }} w systemie KSeF.
+      Uwierzytelnij firmę {{ companyName }} w systemie KSeF.
     </span>
     <span class="block mb-5 text-sm text-gray-500">
-      Upewnij się, że przesłane pliki służą do autoryzacji w KSeF, a nie do podpisu offline.
+      Upewnij się, że przesłane pliki służą do uwierzytelniania w KSeF, a nie do podpisu offline.
+      Jeśli nie posiadasz jeszcze certyfikatów KSeF, wygeneruj je zgodnie z instrukcją:
+      <a
+        href="https://www.youtube.com/watch?v=SE0IHuPHtRE"
+        target="_blank"
+        class="text-sky-600 underline hover:text-primary-600"
+      >
+        Zobacz poradnik
+      </a>
     </span>
     <div class="card flex justify-center">
       <Form :resolver @submit="onFormSubmit" class="flex flex-col gap-4 w-full sm:w-100">
@@ -124,7 +156,13 @@ const onFormSubmit = (event: FormSubmitEvent) => {
             $field.error?.message
           }}</Message>
         </FormField>
-        <Button type="submit" severity="secondary" label="Uwierzytelnij firmę w KSeF" />
+        <Button
+          type="submit"
+          severity="secondary"
+          label="Uwierzytelnij firmę w KSeF"
+          :loading="createKsefCredsMutation.isPending.value"
+          :disabled="createKsefCredsMutation.isPending.value"
+        />
       </Form>
     </div>
   </Dialog>
