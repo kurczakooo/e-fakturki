@@ -18,7 +18,7 @@ repos:
         name: MyPy validate types (backend)
         entry: bash -c 'if [ "$#" -eq 0 ]; then exit 0; fi; uv run mypy "$@"'
         language: system
-        files: ^apps/backend/
+        files: ^apps/backend/.*\.py$
 
       # ---------- FRONTEND ----------
       - id: prettier-frontend

@@ -42,11 +42,12 @@ class Settings(BaseSettings):
     db_echo: bool = False
 
     @property
-    def db_url(self) -> str:
+    def db_url(self) -> int:
         """
         Assemble database URL from settings.
 
-        :return: database URL.
+        Returns:
+            Database URL.
         """
         return f"sqlite+aiosqlite:///{self.db_file.as_posix()}"
 
