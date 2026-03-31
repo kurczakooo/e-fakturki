@@ -10,7 +10,7 @@ repos:
 
       - id: ruff-backend
         name: Ruff check (backend)
-        entry: bash -c "uv run ruff check --force-exclude \"$@\""
+        entry: bash -c "uv run ruff check --fix --force-exclude \"$@\""
         language: system
         files: ^apps/backend/
 
