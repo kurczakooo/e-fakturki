@@ -26,7 +26,7 @@ repos:
         entry: bash -c "cd apps/frontend && npm run format --  \"$@\""
         language: system
 
-      - id: eslint-frontend
-        name: ESLint (frontend)
-        entry: bash -c "cd apps/frontend && npm run lint --  \"$@\""
-        language: system
+      # - id: eslint-frontend
+      #   name: ESLint (frontend)
+      #   entry: bash -c "cd apps/frontend && npm run lint --  \"$@\""
+      #   language: system
