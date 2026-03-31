@@ -26,14 +26,17 @@ jobs:
         run: uv sync
 
       - name: Ruff (lint)
+        id: ruff
         run: uv run ruff check .
         continue-on-error: true
 
       - name: Ruff (format check)
+        id: ruff-format
         run: uv run ruff format --check .
         continue-on-error: true
 
       - name: MyPy (full check)
+        id: mypy
         run: uv run mypy .
         continue-on-error: true
 
