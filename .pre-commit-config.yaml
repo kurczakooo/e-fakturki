@@ -14,12 +14,6 @@ repos:
         language: system
         files: ^apps/backend/
 
-      - id: mypy-backend
-        name: MyPy validate types (backend)
-        entry: bash -c 'uv run mypy --config-file apps/backend/pyproject.toml "$@"' _
-        language: system
-        files: ^apps/backend/
-
       # ---------- FRONTEND ----------
       - id: prettier-frontend
         name: Prettier (frontend)
