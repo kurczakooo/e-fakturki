@@ -27,7 +27,7 @@ class AddressesTable(Base):
         Enum(AddressType, name="address_type"), nullable=False
     )
     building_number: Mapped[str] = mapped_column(String(10), nullable=False)
-    street: Mapped[str] = mapped_column(String(255), nullable=True)
+    street: Mapped[str] = mapped_column(String(255), nullable=False)
     city: Mapped[str] = mapped_column(String(255), nullable=False)
     country: Mapped[str] = mapped_column(String(255), nullable=False)
 
