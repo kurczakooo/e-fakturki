@@ -37,6 +37,15 @@ jobs:
         run: uv run mypy .
         continue-on-error: true
 
+      - name: Fail job if any step failed
+        run: |
+          if [ "${{ steps.ruff.outcome }}" != "success" ] || \
+             [ "${{ steps.ruff-format.outcome }}" != "success" ] || \
+             [ "${{ steps.mypy.outcome }}" != "success" ]; then
+            echo "One or more checks failed"
+            exit 1
+          fi
+
   frontend:
     name: Frontend checks (eslint + prettier)
     runs-on: ubuntu-latest
