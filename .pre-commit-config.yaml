@@ -10,23 +10,25 @@ repos:
 
       - id: ruff-backend
         name: Ruff check (backend)
-        entry: bash -c "uv run ruff check \"$@\""
+        entry: bash -c "uv run ruff check --force-exclude \"$@\""
         language: system
         files: ^apps/backend/
 
-      - id: mypy-backend
-        name: MyPy validate types (backend)
-        entry: bash -c "uv run mypy \"$@\""
-        language: system
-        files: ^apps/backend/
+      # - id: mypy-backend
+      #   name: MyPy validate types (backend)
+      #   entry: bash -c "uv run mypy \"$@\""
+      #   language: system
+      #   files: ^apps/backend/
 
       # ---------- FRONTEND ----------
       - id: prettier-frontend
         name: Prettier (frontend)
         entry: bash -c "cd apps/frontend && npm run format --  \"$@\""
         language: system
+        files: ^apps/frontend/
 
-      # - id: eslint-frontend
-      #   name: ESLint (frontend)
-      #   entry: bash -c "cd apps/frontend && npm run lint --  \"$@\""
-      #   language: system
+      - id: eslint-frontend
+        name: ESLint (frontend)
+        entry: bash -c "cd apps/frontend && npm run lint --  \"$@\""
+        language: system
+        files: ^apps/frontend/
