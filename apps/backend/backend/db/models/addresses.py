@@ -1,8 +1,8 @@
 import enum
-from typing import Never
+from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, Enum, ForeignKey, String
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from backend.db.base import Base
@@ -20,18 +20,22 @@ class AddressesTable(Base):
 
     __tablename__ = "addresses"
 
-    id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
 
-    type: Column[Never] = Column(Enum(AddressType, name="address_type"), nullable=False)
-    building_number = Column(String(10), nullable=False)
-    street = Column(String(255), nullable=True)
-    city = Column(String(255), nullable=False)
-    country = Column(String(255), nullable=False)
+    type: Mapped[str] = mapped_column(
+        Enum(AddressType, name="address_type"), nullable=False
+    )
+    building_number: Mapped[str] = mapped_column(String(10), nullable=False)
+    street: Mapped[str] = mapped_column(String(255), nullable=True)
+    city: Mapped[str] = mapped_column(String(255), nullable=False)
+    country: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    postal_code = Column(String(10), nullable=False)
+    postal_code: Mapped[str] = mapped_column(String(10), nullable=False)
 
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
 
     company = relationship("CompaniesTable", back_populates="addresses")
