@@ -114,6 +114,8 @@ lint.ignore = [
     "ANN401",  # typing.Any are disallowed in `**kwargs
     "PLR0913", # Too many arguments for function call
     "D106",    # Missing docstring in public nested class
+    "I001",    # Unsorted imports 
+    "E402",    # Module level import not at top of file
 ]
 exclude = [
     "backend/db/migrations",
