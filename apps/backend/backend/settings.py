@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     db_echo: bool = False
 
     @property
-    def db_url(self) -> int:
+    def db_url(self) -> str:
         """
         Assemble database URL from settings.
 
