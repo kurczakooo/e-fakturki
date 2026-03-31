@@ -2,11 +2,11 @@ repos:
   - repo: local
     hooks:
       # ---------- BACKEND ----------
-      # - id: ruff-format-backend
-      #   name: Ruff format (backend)
-      #   entry: bash -c "uv run ruff format \"$@\""
-      #   language: system
-      #   files: ^apps/backend/
+      - id: ruff-format-backend
+        name: Ruff format (backend)
+        entry: bash -c "uv run ruff format --force-exclude \"$@\""
+        language: system
+        files: ^apps/backend/
 
       - id: ruff-backend
         name: Ruff check (backend)
@@ -14,11 +14,11 @@ repos:
         language: system
         files: ^apps/backend/
 
-      # - id: mypy-backend
-      #   name: MyPy validate types (backend)
-      #   entry: bash -c "uv run mypy \"$@\""
-      #   language: system
-      #   files: ^apps/backend/
+      - id: mypy-backend
+        name: MyPy validate types (backend)
+        entry: bash -c "uv run mypy --follow-imports=skip \"$@\""
+        language: system
+        files: ^apps/backend/
 
       # ---------- FRONTEND ----------
       - id: prettier-frontend
