@@ -1,4 +1,4 @@
-from enum import Enum as PyEnum
+import enum
 from typing import Never
 
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
@@ -8,7 +8,7 @@ from sqlalchemy.sql import func
 from backend.db.base import Base
 
 
-class AddressType(str, PyEnum):
+class AddressType(enum.StrEnum):
     """Types of addresses."""
 
     REGISTERED = "registered"

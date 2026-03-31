@@ -30,4 +30,4 @@ class CompaniesTable(Base):
     addresses = relationship("AddressesTable", back_populates="company")
     ksef_credentials = relationship("KsefCredentialsTable", back_populates="company")
     bank_accounts = relationship("AccountsTable", back_populates="company")
-    invoices = relationship("InvoicesTable", back_populates="seller_id")
+    invoices = relationship("InvoicesTable", back_populates="seller")

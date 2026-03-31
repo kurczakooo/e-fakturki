@@ -5,14 +5,13 @@ from backend.web.api.router import api_router
 from backend.web.lifespan import lifespan_setup
 
 
-def get_app() -> str:
+def get_app() -> FastAPI:
     """
     Get FastAPI application.
 
     This is the main constructor of an application.
 
-    Returns:
-        Application.
+    :return: application.
     """
     app = FastAPI(
         title="backend",

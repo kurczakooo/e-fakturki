@@ -69,7 +69,7 @@ class InvoicesTable(Base):
     )
     ksef_sent_at = Column(DateTime, nullable=True)
 
-    seller_id = relationship("CompaniesTable", back_populates="invoices")
+    seller = relationship("CompaniesTable", back_populates="invoices")
     buyer = relationship("CompaniesTable", back_populates="invoices")
     invoice_xml_snapshots = relationship(
         "InvoiceXmlSnapshotsTable", back_populates="invoice"

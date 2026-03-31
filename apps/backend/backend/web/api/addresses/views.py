@@ -30,5 +30,6 @@ async def create_address(
     db_session.add(address)
     await db_session.flush()
     await db_session.refresh(address)
+    await db_session.commit()
 
     return AddressCreateResponse(company_id=address.company_id, address_id=address.id)
