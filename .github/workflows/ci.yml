@@ -26,13 +26,16 @@ jobs:
         run: uv sync
 
       - name: Ruff (lint)
-        run: uv run ruff check . --exit-zero
+        run: uv run ruff check .
+        continue-on-error: true
 
       - name: Ruff (format check)
-        run: uv run ruff format --check . --exit-zero
+        run: uv run ruff format --check .
+        continue-on-error: true
 
       - name: MyPy (full check)
-        run: uv run mypy . --exit-zero
+        run: uv run mypy .
+        continue-on-error: true
 
   frontend:
     name: Frontend checks (eslint + prettier)
