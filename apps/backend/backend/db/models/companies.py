@@ -26,3 +26,8 @@ class CompaniesTable(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     owner = relationship("UsersTable", back_populates="companies")
+    products = relationship("ProductsTable", back_populates="company")
+    addresses = relationship("AddressesTable", back_populates="company")
+    ksef_credentials = relationship("KsefCredentialsTable", back_populates="company")
+    bank_accounts = relationship("AccountsTable", back_populates="company")
+    invoices = relationship("InvoicesTable", back_populates="seller_id")

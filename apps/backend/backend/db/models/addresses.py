@@ -8,11 +8,11 @@ from sqlalchemy.sql import func
 from backend.db.base import Base
 
 
-class AddressType(PyEnum):
+class AddressType(str, PyEnum):
     """Types of addresses."""
 
-    reg = "registered"
-    corr = "correspondence"
+    REGISTERED = "registered"
+    CORRESPONDENCE = "correspondence"
 
 
 class AddressesTable(Base):

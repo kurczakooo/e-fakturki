@@ -1,7 +1,8 @@
 from enum import Enum as PyEnum
 from typing import Never
 
-from sqlalchemy import Column, DateTime, Enum, Integer, Numeric, String
+from sqlalchemy import Column, DateTime, Enum, Integer, Numeric, String, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from backend.db.base import Base
@@ -37,10 +38,12 @@ class InvoicesTable(Base):
     sale_place = Column(String(255), nullable=False)
     sale_date = Column(DateTime, server_default=func.now(), nullable=False)
 
+    seller_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     seller_name = Column(String(255), nullable=False, index=True)
     seller_nip = Column(String(10), nullable=False, index=True)
     seller_address = Column(String(512), nullable=False)
 
+    buyer_id = Column(Integer, ForeignKey("companies.id"), nullable=True, index=True)
     buyer_name = Column(String(255), nullable=False, index=True)
     buyer_nip = Column(String(10), nullable=False, index=True)
     buyer_address = Column(String(512), nullable=False)
@@ -65,3 +68,9 @@ class InvoicesTable(Base):
         default=KsefStatus.not_sent,
     )
     ksef_sent_at = Column(DateTime, nullable=True)
+
+    seller_id = relationship("CompaniesTable", back_populates="invoices")
+    buyer = relationship("CompaniesTable", back_populates="invoices")
+    invoice_xml_snapshots = relationship(
+        "InvoiceXmlSnapshotsTable", back_populates="invoice"
+    )

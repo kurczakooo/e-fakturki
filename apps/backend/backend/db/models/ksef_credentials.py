@@ -11,9 +11,7 @@ class KsefCredentialsTable(Base):
     __tablename__ = "ksef_credentials"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(
-        Integer, ForeignKey("companies.id"), unique=True, nullable=False
-    )
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
 
     encrypted_cert_auth = Column(Text, nullable=False)
     encrypted_private_key_auth = Column(Text, nullable=False)

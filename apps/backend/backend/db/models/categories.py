@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String
-
+from sqlalchemy.orm import relationship
 from backend.db.base import Base
 
 
@@ -15,3 +15,5 @@ class CategoriesTable(Base):
 
     default_unit = Column(String(255), nullable=True)
     default_tax_rate = Column(Integer, nullable=True)
+
+    products = relationship("ProductsTable", back_populates="category")
