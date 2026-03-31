@@ -6,19 +6,19 @@ repos:
         name: Ruff format (backend)
         entry: bash -c "uv run ruff format --force-exclude \"$@\""
         language: system
-        files: ^apps/backend/.*\.py$
+        files: ^apps/backend/
 
       - id: ruff-backend
         name: Ruff check (backend)
         entry: bash -c "uv run ruff check --force-exclude \"$@\""
         language: system
-        files: ^apps/backend/.*\.py$
+        files: ^apps/backend/
 
       - id: mypy-backend
         name: MyPy validate types (backend)
-        entry: bash -c "uv run mypy \"$@\""
+        entry: bash -c 'if [ "$#" -eq 0 ]; then exit 0; fi; uv run mypy "$@"'
         language: system
-        files: ^apps/backend/.*\.py$
+        files: ^apps/backend/
 
       # ---------- FRONTEND ----------
       - id: prettier-frontend
