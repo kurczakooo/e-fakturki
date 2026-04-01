@@ -1,5 +1,7 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from backend.db.base import Base
@@ -10,20 +12,20 @@ class CompaniesTable(Base):
 
     __tablename__ = "companies"
 
-    id = Column(Integer, primary_key=True, index=True)
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
 
-    name = Column(String(255), nullable=False)
-    nip = Column(String(10), nullable=False, unique=True)
-    regon = Column(String(14), nullable=True, unique=True)
-    krs = Column(String(10), nullable=True, unique=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    nip: Mapped[str] = mapped_column(String(10), nullable=False, unique=True)
+    regon: Mapped[str] = mapped_column(String(14), nullable=True, unique=True)
+    krs: Mapped[str] = mapped_column(String(10), nullable=True, unique=True)
 
-    email = Column(String(255), nullable=True)
-    phone_number = Column(String(20), nullable=True)
-    additional_info = Column(String(2048), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=True)
+    phone_number: Mapped[str] = mapped_column(String(20), nullable=True)
+    additional_info: Mapped[str] = mapped_column(String(2048), nullable=True)
 
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     owner = relationship("UsersTable", back_populates="companies")
     products = relationship("ProductsTable", back_populates="company")
