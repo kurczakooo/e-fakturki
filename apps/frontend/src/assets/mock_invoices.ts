@@ -1,7 +1,6 @@
 const items = [
   {
     inv_nr: "FV/1/26",
-    status: "draft",
     ksef: "not_sent",
     is_new: false,
     date: "2026-01-03",
@@ -12,7 +11,6 @@ const items = [
   },
   {
     inv_nr: "FV/2/26",
-    status: "issued",
     ksef: "sent",
     is_new: false,
     date: "2026-01-05",
@@ -23,7 +21,6 @@ const items = [
   },
   {
     inv_nr: "FV/3/26",
-    status: "issued",
     ksef: "accepted",
     is_new: false,
     date: "2026-01-07",
@@ -34,7 +31,6 @@ const items = [
   },
   {
     inv_nr: "FV/4/26",
-    status: "draft",
     ksef: "not_sent",
     is_new: false,
     date: "2026-01-09",
