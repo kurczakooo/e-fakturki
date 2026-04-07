@@ -3,5 +3,5 @@ import InvoicesTable from "../components/invoices/InvoicesTable.vue";
 </script>
 
 <template>
-  <InvoicesTable />
+  <InvoicesTable invoice_type="purchase" />
 </template>

@@ -1,24 +1,21 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 
-import { DataTable, Column, Button, Tag, Select } from "primevue";
+import { DataTable, Column, Button, Tag, Select, useToast } from "primevue";
 import InvoiceDetails from "../dialogs/InvoiceDetails.vue";
-import items from "../../assets/mock_invoices";
-import PaymentStatusColumnField from "./paymentStatusColumnField.vue";
+import { getInvoicesList } from "../../lib/services/ksefService";
+import { useMutation } from "@tanstack/vue-query";
+import { useCurrentUserStore } from "../../stores/currentUserStore";
+import type { getInvoicesListResponse } from "../../lib/types/ksef";
+// import items from "../../assets/mock_invoices";
 
-// Invoice status
-const statusIcon = {
-  draft: "pi pi-clipboard",
-  issued: "pi pi-check-circle",
-};
-const statusSeverity = {
-  draft: "secondary",
-  issued: "success",
-};
-const statusHint = {
-  draft: "Szkic faktury",
-  issued: "Faktura wystawiona",
-};
+const props = defineProps<{
+  invoice_type: string;
+}>();
+
+const toast = useToast();
+const currentUserStore = useCurrentUserStore();
+
 // Invoice in KSeF status
 const ksefStatusIcon = {
   not_sent: "pi pi-hourglass",
@@ -59,14 +56,38 @@ const paymentOptions = [
   { label: "Częściowo opłacono", value: "partial" },
 ];
 
-const loading = ref<boolean>(false);
 const tableType = "Faktury sprzedażowe";
 const selectedInvoice = ref(null);
 const selectedInvoiceData = ref<any>(null);
 const dialogVisible = ref(false);
-const sortedInvoices = ref([]);
+const sortedInvoices = ref<getInvoicesListResponse[]>([]);
 const editRows = ref([]);
 const isEditing = ref(false);
+
+const getInvoicesMutation = useMutation({
+  mutationFn: async (values: any) => {
+    const invoice_list = await getInvoicesList(
+      {
+        company_id: 1,
+        date_from: "01/02/2026",
+        date_to: "07/04/2026",
+        page_size: 100,
+        page_offset: 0,
+      },
+      values.invoice_type,
+    );
+    return invoice_list;
+  },
+
+  onSuccess: (data) => {
+    sortedInvoices.value = data.sort((a, b) => Number(b.is_new) - Number(a.is_new));
+    toast.add({ severity: "info", summary: "Pomyślnie pobrano faktury.", life: 3000 });
+  },
+
+  onError: () => {
+    toast.add({ severity: "error", summary: "Błąd w pobieraniu faktur.", life: 3000 });
+  },
+});
 
 function onInvoiceSelect(event: any) {
   // dont allow for selection when editing
@@ -90,14 +111,16 @@ function OnChoosePaymentStatus(event: any) {
 }
 
 onMounted(() => {
-  sortedInvoices.value = items.sort((a, b) => Number(b.is_new) - Number(a.is_new));
+  getInvoicesMutation.mutate({
+    invoice_type: props.invoice_type,
+  });
 });
 </script>
 
 <template>
   <DataTable
     :value="sortedInvoices"
-    :loading="loading"
+    :loading="getInvoicesMutation.isPending.value"
     v-model:editingRows="editRows"
     edit-mode="row"
     dataKey="inv_nr"
@@ -129,51 +152,42 @@ onMounted(() => {
         <Button icon="pi pi-refresh" rounded raised />
       </div>
     </template>
-    <Column field="inv_nr" sortable header="Numer faktury" style="width: 10%">
+    <Column field="invoice_number" sortable header="Numer faktury" style="width: 15%">
       <template #body="slotProps">
         <Tag v-if="slotProps.data.is_new" value="Nowa"></Tag>
-        <span>{{ " " + slotProps.data.inv_nr }}</span>
+        <span>{{ " " + slotProps.data.invoice_number }}</span>
       </template>
     </Column>
-    <Column field="status" sortable header="Status" style="width: 5%">
+    <Column field="ksef_status" sortable header="Status KSeF" style="width: 10%">
       <template #body="slotProps">
         <Tag
-          :icon="statusIcon[slotProps.data.status]"
-          :severity="statusSeverity[slotProps.data.status]"
-          v-tooltip.bottom="{ value: statusHint[slotProps.data.status] }"
+          :icon="ksefStatusIcon[slotProps.data.ksef_status]"
+          :severity="ksefStatusSeverity[slotProps.data.ksef_status]"
+          v-tooltip.bottom="{ value: ksefStatusHint[slotProps.data.ksef_status] }"
         ></Tag>
       </template>
     </Column>
-    <Column field="ksef" sortable header="Status KSeF" style="width: 5%">
-      <template #body="slotProps">
-        <Tag
-          :icon="ksefStatusIcon[slotProps.data.ksef]"
-          :severity="ksefStatusSeverity[slotProps.data.ksef]"
-          v-tooltip.bottom="{ value: ksefStatusHint[slotProps.data.ksef] }"
-        ></Tag>
-      </template>
-    </Column>
-    <Column field="date" sortable header="Data wystawienia" style="width: 10%"> </Column>
-    <Column field="buyer" sortable header="Kontrahent" style="width: 15%"> </Column>
-    <Column field="sum_gross" sortable header="Suma brutto" style="width: 10%">
+    <Column field="issue_date" sortable header="Data wystawienia" style="width: 10%"> </Column>
+    <Column field="buyer_name" sortable header="Kontrahent" style="width: 15%"> </Column>
+    <Column field="gross_total" sortable header="Suma brutto" style="width: 10%">
       <template #body="slotProps">
         <span class="inline-flex gap-1 items-baseline">
           <span>PLN</span>
-          <span class="font-semibold">{{ slotProps.data.sum_gross.toFixed(2) }}</span>
+          <span class="font-semibold">{{ slotProps.data.gross_total.toFixed(2) }}</span>
         </span>
       </template>
     </Column>
-    <Column field="pay_type" sortable header="Rodzaj płatności" style="width: 10%">
+    <!-- <Column field="pay_type" sortable header="Rodzaj płatności" style="width: 10%">
       <template #body="slotProps">
         <span class="font-semibold">{{ paymentType[slotProps.data.pay_type] }}</span>
       </template>
-    </Column>
-    <Column field="pay_status" sortable header="Status płatności" style="width: 15%">
+    </Column> -->
+    <Column field="payment_status" sortable header="Status płatności" style="width: 15%">
       <!-- default value -->
       <template #body="slotProps">
         <Tag
-          :value="paymentStatus[slotProps.data.pay_status]"
-          :severity="paymentStatusSeverity[slotProps.data.pay_status]"
+          :value="paymentStatus[slotProps.data.payment_status]"
+          :severity="paymentStatusSeverity[slotProps.data.payment_status]"
         />
       </template>
       <!-- selection drawer -->
