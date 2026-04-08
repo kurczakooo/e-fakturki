@@ -8,7 +8,7 @@
 body {
   margin: 0;
   padding: 0;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -23,9 +23,14 @@ body {
   display: flex;
   flex: 1;
   padding-top: 1rem;
+  height: 100%;
+  min-height: 0;
 }
 
 .content-area {
   flex: 1;
   padding-left: 1rem;
+  overflow-y: auto;
+  height: 100%;
+  min-height: 0;
 }
