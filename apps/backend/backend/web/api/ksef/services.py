@@ -1,5 +1,7 @@
 """Ksef API services."""
 
+from dateutil import parser
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +39,15 @@ async def get_invoice_xml(db_session: AsyncSession, invoice_id: int) -> str:
 def xml_str_to_bytes(xml: str) -> bytes:
     """Turns str xml to bytes."""
     return xml.encode("utf-8")
+
+
+def to_iso(date_str: str) -> str:
+    """Converts a date string in various formats to ISO format (YYYY-MM-DD)."""
+    try:
+        dt = parser.parse(date_str, dayfirst=True)
+        return dt.date().isoformat()
+    except Exception as err:
+        raise ValueError(f"Invalid date format: {date_str}") from err
 
 
 async def get_auth_certs(
