@@ -25,11 +25,12 @@ class CompaniesTable(Base):
     additional_info: Mapped[str] = mapped_column(String(2048), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
 
     owner = relationship("UsersTable", back_populates="companies")
     products = relationship("ProductsTable", back_populates="company")
     addresses = relationship("AddressesTable", back_populates="company")
     ksef_credentials = relationship("KsefCredentialsTable", back_populates="company")
     bank_accounts = relationship("AccountsTable", back_populates="company")
-    invoices = relationship("InvoicesTable", back_populates="seller")
