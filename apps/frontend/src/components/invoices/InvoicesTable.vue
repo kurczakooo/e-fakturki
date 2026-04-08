@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 
-import { DataTable, Column, Button, Tag, Select, useToast } from "primevue";
+import { DataTable, Column, Button, Tag, Select, Skeleton, useToast } from "primevue";
 import InvoiceDetails from "../dialogs/InvoiceDetails.vue";
-import { getInvoicesList } from "../../lib/services/ksefService";
+import { getInvoicesList } from "../../lib/services/invoiceService";
 import { useMutation } from "@tanstack/vue-query";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
-import type { getInvoicesListResponse } from "../../lib/types/ksef";
+import type { invoiceListItem } from "../../lib/types/ksef";
+import { useInvoicesStore } from "../../stores/invoicesStore";
 // import items from "../../assets/mock_invoices";
 
 const props = defineProps<{
@@ -15,6 +16,7 @@ const props = defineProps<{
 
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
+const invoicesStore = useInvoicesStore();
 
 // Invoice in KSeF status
 const ksefStatusIcon = {
@@ -56,36 +58,47 @@ const paymentOptions = [
   { label: "Częściowo opłacono", value: "partial" },
 ];
 
-const tableType = "Faktury sprzedażowe";
+const tableType = props.invoice_type == "sales" ? "Faktury sprzedażowe" : "Faktury zakupowe";
 const selectedInvoice = ref(null);
 const selectedInvoiceData = ref<any>(null);
 const dialogVisible = ref(false);
-const sortedInvoices = ref<getInvoicesListResponse[]>([]);
+const sortedInvoices = ref<invoiceListItem[]>([]);
 const editRows = ref([]);
 const isEditing = ref(false);
+const pageSize = ref(10);
+const totalRecords = ref(0);
 
 const getInvoicesMutation = useMutation({
   mutationFn: async (values: any) => {
-    const invoice_list = await getInvoicesList(
+    const list_data = await getInvoicesList(
       {
-        company_id: 1,
-        date_from: "01/02/2026",
-        date_to: "07/04/2026",
-        page_size: 100,
-        page_offset: 0,
+        company_id: values.company_id,
+        date_from: values.date_from,
+        date_to: values.date_to,
+        page_size: values.page_size,
+        page_offset: values.page_offset,
       },
       values.invoice_type,
     );
-    return invoice_list;
+    return list_data;
   },
 
   onSuccess: (data) => {
-    sortedInvoices.value = data.sort((a, b) => Number(b.is_new) - Number(a.is_new));
+    sortedInvoices.value = data.invoices.sort((a, b) => Number(b.is_new) - Number(a.is_new));
+    totalRecords.value = data.page_info.total_items;
+
+    if (props.invoice_type === "sales") {
+      invoicesStore.setSalesInvoicesCount(data.invoices.filter((inv) => inv.is_new).length);
+      console.log(invoicesStore.getSalesInvoicesCountStr);
+    } else {
+      invoicesStore.setPurchaseInvoicesCount(data.invoices.filter((inv) => inv.is_new).length);
+    }
+
     toast.add({ severity: "info", summary: "Pomyślnie pobrano faktury.", life: 3000 });
   },
 
-  onError: () => {
-    toast.add({ severity: "error", summary: "Błąd w pobieraniu faktur.", life: 3000 });
+  onError: (data) => {
+    toast.add({ severity: "error", summary: "Błąd w pobieraniu faktur." + data, life: 3000 });
   },
 });
 
@@ -110,8 +123,49 @@ function OnChoosePaymentStatus(event: any) {
   isEditing.value = false;
 }
 
+function onPageChange(event: any) {
+  pageSize.value = event.rows;
+
+  getInvoicesMutation.mutate({
+    company_id: 1,
+    date_from: "01/02/2026",
+    date_to: "07/04/2026",
+    page_size: pageSize.value,
+    page_offset: event.first,
+    invoice_type: props.invoice_type,
+  });
+}
+
+function onLocalSort(event: any) {
+  const { sortField, sortOrder } = event;
+
+  sortedInvoices.value.sort((a, b) => {
+    const aValue = a[sortField];
+    const bValue = b[sortField];
+
+    if (aValue == null) return -1 * sortOrder;
+    if (bValue == null) return 1 * sortOrder;
+
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return (aValue - bValue) * sortOrder;
+    }
+
+    if (sortField === "issue_date") {
+      return (new Date(aValue).getTime() - new Date(bValue).getTime()) * sortOrder;
+    }
+
+    // default string sorting
+    return String(aValue).localeCompare(String(bValue)) * sortOrder;
+  });
+}
+
 onMounted(() => {
   getInvoicesMutation.mutate({
+    company_id: 1,
+    date_from: "01/02/2026",
+    date_to: "07/04/2026",
+    page_size: pageSize.value,
+    page_offset: 0,
     invoice_type: props.invoice_type,
   });
 });
@@ -123,7 +177,7 @@ onMounted(() => {
     :loading="getInvoicesMutation.isPending.value"
     v-model:editingRows="editRows"
     edit-mode="row"
-    dataKey="inv_nr"
+    dataKey="invoice_number"
     @row-edit-init="isEditing = true"
     @row-edit-save="OnChoosePaymentStatus"
     @row-edit-cancel="isEditing = false"
@@ -132,13 +186,20 @@ onMounted(() => {
     @row-select="onInvoiceSelect"
     @row-unselect="onInvoiceUnselect"
     paginator
-    :rows="10"
+    paginator-position="bottom"
+    :rows="pageSize"
     :rows-per-page-options="[5, 10, 15, 25, 50]"
+    :total-records="totalRecords"
+    @page="onPageChange"
+    lazy
     removableSort
+    @sort="onLocalSort"
+    scroll-height="flex"
     scrollable
-    stripedRos
+    scroll-direction="both"
+    striped-rows
     :pt="{
-      table: { style: 'min-width: 50rem' },
+      table: { style: 'min-width: 50rem;' },
       column: {
         bodycell: ({ state }) => ({
           style: state['d_editing'],
@@ -167,13 +228,23 @@ onMounted(() => {
         ></Tag>
       </template>
     </Column>
-    <Column field="issue_date" sortable header="Data wystawienia" style="width: 10%"> </Column>
-    <Column field="buyer_name" sortable header="Kontrahent" style="width: 15%"> </Column>
+    <Column field="issue_date" sortable header="Data wystawienia" style="width: 10%">
+      <template #body="slotProps">
+        <span>{{ new Date(slotProps.data.issue_date).toLocaleDateString() }}</span>
+      </template>
+    </Column>
+    <Column sortable header="Kontrahent" style="width: 20%">
+      <template #body="slotProps">
+        <span>{{
+          props.invoice_type === "sales" ? slotProps.data.buyer_name : slotProps.data.seller_name
+        }}</span>
+      </template>
+    </Column>
     <Column field="gross_total" sortable header="Suma brutto" style="width: 10%">
       <template #body="slotProps">
         <span class="inline-flex gap-1 items-baseline">
           <span>PLN</span>
-          <span class="font-semibold">{{ slotProps.data.gross_total.toFixed(2) }}</span>
+          <span class="font-semibold">{{ slotProps.data.gross_total }}</span>
         </span>
       </template>
     </Column>
