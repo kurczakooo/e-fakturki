@@ -2,6 +2,9 @@
 import { ref } from "vue";
 import { Menu, Badge } from "primevue";
 import { toggleDarkMode } from "../lib/utils";
+import { useInvoicesStore } from "../stores/invoicesStore";
+
+const invoicesStore = useInvoicesStore();
 
 const items = ref([
   {
@@ -18,14 +21,12 @@ const items = ref([
         icon: "pi pi-shop",
         route: "/sales",
         disabled: false,
-        badge: "2",
       },
       {
         label: "Zakup",
         icon: "pi pi-shopping-cart",
         route: "/purchases",
         disabled: false,
-        badge: "2",
       },
     ],
   },
@@ -79,7 +80,15 @@ const items = ref([
           <a v-ripple :href="href" v-bind="props.action" @click="navigate">
             <span :class="item.icon" />
             <span class="ml-2">{{ item.label }}</span>
-            <Badge v-if="item.badge" class="ml-auto" :value="item.badge" />
+            <Badge
+              v-if="['/sales', '/purchases'].includes(item.route)"
+              class="ml-auto rounded-xs"
+              :value="
+                item.route === '/sales'
+                  ? invoicesStore.getSalesInvoicesCountStr
+                  : invoicesStore.getPurchaseInvoicesCountStr
+              "
+            />
           </a>
         </router-link>
         <a v-else v-ripple :href="item.url" :target="item.target" v-bind="props.action">
