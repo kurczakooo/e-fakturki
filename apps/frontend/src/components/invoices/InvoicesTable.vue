@@ -89,7 +89,7 @@ const getInvoicesMutation = useMutation({
 
     if (props.invoice_type === "sales") {
       invoicesStore.setSalesInvoicesCount(data.invoices.filter((inv) => inv.is_new).length);
-      console.log(invoicesStore.getSalesInvoicesCountStr);
+      console.log(sortedInvoices.value);
     } else {
       invoicesStore.setPurchaseInvoicesCount(data.invoices.filter((inv) => inv.is_new).length);
     }
