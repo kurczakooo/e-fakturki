@@ -4,7 +4,6 @@ import type {
   KsefCredentialsCreationRequest,
   KsefCredentialsCreationResponse,
   getInvoicesListRequest,
-  getInvoicesListResponse,
 } from "../types/ksef";
 import { apiConfig } from "../../config";
 
@@ -33,12 +32,12 @@ export const createKsefCredentials = async (
   }
 };
 
-export const getInvoicesList = async (
+export const refreshInvoiceListFromKsef = async (
   data: getInvoicesListRequest,
   invoiceType: InvoiceType,
-): Promise<getInvoicesListResponse[]> => {
+): Promise<string[]> => {
   try {
-    const response = await axios.post<getInvoicesListResponse[]>(baseUrl + "/invoices", data, {
+    const response = await axios.post<string[]>(baseUrl + "/invoices", data, {
       params: {
         invoice_type: invoiceType,
       },
