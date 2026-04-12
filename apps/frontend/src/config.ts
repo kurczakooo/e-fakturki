@@ -1,5 +1,6 @@
 import Aura from "@primeuix/themes/aura";
 import { definePreset } from "@primeuix/themes";
+import { locales } from "zod";
 
 export const apiConfig = {
   apiBaseUrl: "http://localhost:8000/api",
@@ -43,9 +44,44 @@ export const primeVueConfig = {
     preset: customPreset,
     options: {
       prefix: "prime",
-      darkModeSelector: ".prime-dark-mode",
+      darkModeSelector: "light",
     },
   },
   ripple: true,
   inputVariant: "filled",
+  locale: {
+    dayNames: ["niedziela", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota"],
+    dayNamesMin: ["ndz", "pon", "wt", "śr", "czw", "pt", "sob"],
+    monthNames: [
+      "styczeń",
+      "luty",
+      "marzec",
+      "kwiecień",
+      "maj",
+      "czerwiec",
+      "lipiec",
+      "sierpień",
+      "wrzesień",
+      "październik",
+      "listopad",
+      "grudzień",
+    ],
+    monthNamesShort: [
+      "sty",
+      "lut",
+      "mar",
+      "kwi",
+      "maj",
+      "cze",
+      "lip",
+      "sie",
+      "wrz",
+      "paź",
+      "lis",
+      "gru",
+    ],
+    today: "Dziś",
+    clear: "Wyczyść",
+    noAvailableOptions: "Brak opcji do wyboru",
+  },
 };
