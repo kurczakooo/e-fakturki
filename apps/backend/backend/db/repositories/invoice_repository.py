@@ -2,11 +2,14 @@
 
 from datetime import datetime
 from typing import Literal
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_
 
+from backend.web.api.ksef.schemas import SalesInvoicesRequest
 from backend.db.models.invoices import InvoicesTable
+from backend.web.api.invoices.schemas import InvoicesListResponse, PageInfo
 
 
 def parse_date(value: str | None) -> datetime | None:
@@ -67,42 +70,73 @@ async def insert_invoice(db: AsyncSession, invoice_data: dict) -> str:
         return None
 
 
-async def get_all_invoices(db: AsyncSession) -> list[InvoicesTable]:
-    """Returns all invoices from the database."""
-    result = await db.execute(select(InvoicesTable))
-    return result.scalars().all()
-
-
 async def get_company_invoices_list(
     db: AsyncSession,
+    filters: SalesInvoicesRequest,
     company_nip: str,
-    invoice_type: Literal["sales", "purchase", "all"] = "all",
-) -> list:
-    """Returns all invoices from the database."""
-    query = select(
-        InvoicesTable.id,
-        InvoicesTable.invoice_number,
-        InvoicesTable.issue_date,
-        InvoicesTable.is_new,
-        InvoicesTable.seller_name,
-        InvoicesTable.buyer_name,
-        InvoicesTable.gross_total,
-        InvoicesTable.currency,
-        InvoicesTable.payment_type,
-        InvoicesTable.payment_status,
-        InvoicesTable.ksef_number,
-        InvoicesTable.ksef_status,
-    )
+    invoice_type: Literal["sales", "purchase"],
+) -> InvoicesListResponse:
+    """Returns all invoices from the db, paginated."""
 
+    # Decide on the filter condition
     if invoice_type == "sales":
-        query = query.where(InvoicesTable.seller_nip == company_nip)
+        filter_condition = InvoicesTable.seller_nip == company_nip
     elif invoice_type == "purchase":
-        query = query.where(InvoicesTable.buyer_nip == company_nip)
+        filter_condition = InvoicesTable.buyer_nip == company_nip
     else:
-        query = query.where(
-            (InvoicesTable.seller_nip == company_nip)
-            | (InvoicesTable.buyer_nip == company_nip)
+        filter_condition = (InvoicesTable.seller_nip == company_nip) | (
+            InvoicesTable.buyer_nip == company_nip
         )
 
-    result = await db.execute(query.order_by(InvoicesTable.issue_date.desc()))
-    return result.mappings().all()
+    # Get total count of invoices
+    total_items = await db.execute(
+        select(func.count(InvoicesTable.id)).where(
+            and_(
+                filter_condition,
+                InvoicesTable.issue_date >= parse_date(filters.date_from),
+                InvoicesTable.issue_date <= parse_date(filters.date_to),
+            )
+        )
+    )
+    total_items = total_items.scalar()
+
+    # Query db with filters and pagination
+    result = await db.execute(
+        select(
+            InvoicesTable.id,
+            InvoicesTable.invoice_number,
+            InvoicesTable.issue_date,
+            InvoicesTable.is_new,
+            InvoicesTable.seller_name,
+            InvoicesTable.buyer_name,
+            InvoicesTable.gross_total,
+            InvoicesTable.currency,
+            InvoicesTable.payment_type,
+            InvoicesTable.payment_status,
+            InvoicesTable.ksef_number,
+            InvoicesTable.ksef_status,
+        )
+        .where(
+            and_(
+                filter_condition,
+                InvoicesTable.issue_date >= parse_date(filters.date_from),
+                InvoicesTable.issue_date <= parse_date(filters.date_to),
+            )
+        )
+        .order_by(InvoicesTable.issue_date.desc())
+        .limit(filters.page_size)
+        .offset(filters.page_offset)
+    )
+    data = [dict(row) for row in result.mappings().all()]
+
+    page_info = PageInfo(
+        current_page=(filters.page_offset // filters.page_size) + 1
+        if total_items > 0
+        else 1,
+        page_size=filters.page_size,
+        total_items=total_items,
+        has_next_page=(filters.page_offset + filters.page_size) < total_items,
+        has_previous_page=filters.page_offset > 0,
+    )
+
+    return InvoicesListResponse(invoices=data, page_info=page_info)
