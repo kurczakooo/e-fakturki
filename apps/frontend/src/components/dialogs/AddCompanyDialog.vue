@@ -20,7 +20,7 @@ const initialValues = reactive({
   nip: "",
   krs: "",
   regon: "",
-  street: "ul.",
+  street: "",
   number: "",
   zipcode: "",
   city: "",
@@ -42,12 +42,7 @@ const resolver = zodResolver(
     regon: z.string().refine((val) => val === "" || /^(\d{9}|\d{14})$/.test(val), {
       message: "REGON musi mieć 9 lub 14 cyfr lub pozostać pusty",
     }),
-    street: z
-      .string()
-      .min(4, { message: "Ulica jest wymagana." })
-      .regex(/^ul\..+/, {
-        message: "Ulica musi zaczynać się od 'ul.' (np. ul.Kwiatowa)",
-      }),
+    street: z.string().min(4, { message: "Ulica jest wymagana." }),
     number: z
       .string()
       .min(1, { message: "Numer jest wymagany." })
