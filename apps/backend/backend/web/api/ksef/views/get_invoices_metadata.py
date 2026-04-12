@@ -14,24 +14,21 @@ from backend.services.ksef.auth.ksef_session import open_ksef_session
 
 from backend.web.api.ksef.schemas import SalesInvoicesRequest
 from backend.web.api.ksef.services import get_auth_certs, to_iso
-from backend.db.repositories.invoice_repository import (
-    insert_invoice,
-    get_company_invoices_list,
-)
+from backend.db.repositories.invoice_repository import insert_invoice
 
 from backend.settings import Settings
 
 router = APIRouter()
 
 
-@router.post("/invoices", status_code=200, response_model=list)
+@router.post("/invoices", status_code=200, response_model=list[str])
 async def get_invoices_list(
     payload: SalesInvoicesRequest,
     invoice_type: Literal["sales", "purchase"],
     db_session: AsyncSession = Depends(get_db_session),
-) -> list:
+) -> list[str]:
     """
-    Download the invoices metadata list from KSeF.
+    Download the invoices metadata list from KSeF and save them to the DB.
 
     https://api-demo.ksef.mf.gov.pl/docs/v2/index.html#tag/Pobieranie-faktur/paths/~1invoices~1query~1metadata/post
     """
@@ -85,12 +82,10 @@ async def get_invoices_list(
         )
         invoices = metadata.get("invoices") or metadata.get("invoiceList") or []
 
+        ids = []
         for inv in invoices:
-            await insert_invoice(db_session, inv)
-
-        invoices_list = await get_company_invoices_list(
-            db_session, company_nip, invoice_type
-        )
+            inv_id = await insert_invoice(db_session, inv)
+            ids.append(inv_id)
 
         ksef_session_params.workflow.close_session(
             ksef_session_params.session.session_reference_number, access_token
@@ -98,4 +93,4 @@ async def get_invoices_list(
         remove_temp_file(cert_path)
         remove_temp_file(key_path)
 
-    return invoices_list
+    return ids
