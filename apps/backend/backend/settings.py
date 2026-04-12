@@ -2,6 +2,8 @@ import enum
 from pathlib import Path
 from tempfile import gettempdir
 
+from ksef_client import KsefEnvironment
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 TEMP_DIR = Path(gettempdir())
@@ -34,7 +36,16 @@ class Settings(BaseSettings):
     reload: bool = False
 
     # Current environment
-    environment: str = "dev"
+    environment: str = "prod"
+
+    # KSeF environment
+    @classmethod
+    def ksef_environment(cls) -> str:
+        """Returns the KSeF environment to be used based on the current environment."""
+        if cls().environment == "prod":
+            return KsefEnvironment.PROD.value
+
+        return KsefEnvironment.DEMO.value
 
     log_level: LogLevel = LogLevel.INFO
     # Variables for the database
