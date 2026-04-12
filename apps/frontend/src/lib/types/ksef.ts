@@ -28,7 +28,7 @@ export interface getInvoicesListRequest {
   page_offset: number;
 }
 
-export interface getInvoicesListResponse {
+export interface invoiceListItem {
   id: string;
   invoice_number: string;
   issued_date: string;
@@ -41,4 +41,17 @@ export interface getInvoicesListResponse {
   payment_status: string | null;
   ksef_number: string | null;
   ksef_status: string;
+}
+
+interface pageInfo {
+  current_page: number;
+  page_size: number;
+  total_items: number;
+  has_next_page: boolean;
+  has_previous_page: boolean;
+}
+
+export interface getInvoicesListResponse {
+  invoices: invoiceListItem[];
+  page_info: pageInfo;
 }
