@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    token_type: str = "bearer"  # noqa: S105
     oauth2_scheme: OAuth2PasswordBearer = OAuth2PasswordBearer(
         tokenUrl="/login", scheme_name="JWT"
     )
