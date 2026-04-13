@@ -20,11 +20,11 @@ from backend.settings import settings
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/signup", status_code=201, response_model=UserRead)
+@router.post("/signup", status_code=201, response_model=Token)
 async def signup_user(
     payload: UserCreate,
     db_session: AsyncSession = Depends(get_db_session),
-) -> UserRead:
+) -> Token:
     """Create and authorize a new user."""
 
     result = await db_session.execute(
@@ -51,7 +51,13 @@ async def signup_user(
     await db_session.flush()
     await db_session.refresh(user)
 
-    return UserRead.model_validate(user)
+    claims = TokenData(
+        sub=user.id, email=user.email, name=user.name, last_name=user.last_name
+    )
+
+    return Token(
+        access_token=create_access_token(claims), token_type=settings.token_type
+    )
 
 
 @router.post("/login", status_code=200)
