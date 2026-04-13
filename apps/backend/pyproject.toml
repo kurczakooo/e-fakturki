@@ -122,6 +122,7 @@ lint.ignore = [
     "D106",    # Missing docstring in public nested class
     "I001",    # Unsorted imports 
     "E402",    # Module level import not at top of file
+    "UP017",   # Use datetime.UTC alias
 ]
 exclude = [
     "backend/db/migrations",

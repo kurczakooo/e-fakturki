@@ -5,6 +5,7 @@ from tempfile import gettempdir
 from ksef_client import KsefEnvironment
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from fastapi.security import OAuth2PasswordBearer
 
 TEMP_DIR = Path(gettempdir())
 
@@ -37,6 +38,14 @@ class Settings(BaseSettings):
 
     # Current environment
     environment: str = "prod"
+
+    # auth
+    jwt_secret_key: str
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    oauth2_scheme: OAuth2PasswordBearer = OAuth2PasswordBearer(
+        tokenUrl="/login", scheme_name="JWT"
+    )
 
     # KSeF environment
     @classmethod
