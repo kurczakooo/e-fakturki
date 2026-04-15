@@ -19,6 +19,7 @@
     "axios": "^1.13.6",
     "fuzzy-search": "^3.2.1",
     "json5": "^2.2.3",
+    "jwt-decode": "^4.0.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",

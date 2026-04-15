@@ -7,6 +7,7 @@ export const apiConfig = {
 
   endpoints: {
     ksef: "/ksef",
+    auth: "/auth",
     companies: "/companies",
     addresses: "/addresses",
     bankAccounts: "/bank-accounts",
@@ -44,7 +45,7 @@ export const primeVueConfig = {
     preset: customPreset,
     options: {
       prefix: "prime",
-      darkModeSelector: "light",
+      darkModeSelector: "system",
     },
   },
   ripple: true,
