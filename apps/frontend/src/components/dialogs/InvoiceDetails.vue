@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { Button, Dialog, Card, Tag, DataTable, Column, Divider, Select, DataView } from "primevue";
+import { Button, Dialog, Card, Tag, DataTable, Column, Divider, Select } from "primevue";
 import invoiceXml from "../../assets/mock_xml";
+import invoiceData from "../../assets/mock_invoice";
+import { ref } from "vue";
 
 const props = defineProps<{
   visible: boolean;
@@ -83,6 +85,8 @@ function onDownloadPdf() {}
 function onPrintPdf() {}
 
 const emit = defineEmits(["update:visible"]);
+
+const invoice = ref(invoiceData);
 </script>
 
 <template>

@@ -12,14 +12,13 @@ import Tooltip from "primevue/tooltip";
 
 const app = createApp(App);
 const pinia = createPinia();
+app.use(pinia);
 
 app.use(router);
 
 app.use(ToastService);
 
 app.use(VueQueryPlugin);
-
-app.use(pinia);
 
 app.use(PrimeVue, primeVueConfig);
 app.directive("tooltip", Tooltip);

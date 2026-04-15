@@ -7,6 +7,7 @@ export const useCurrentUserStore = defineStore("currentUser", {
       name: null as string | null,
       lastname: null as string | null,
       email: null as string | null,
+      token: null as string | null,
 
       companyId: null as number | null,
       companyName: null as string | null,
@@ -23,17 +24,22 @@ export const useCurrentUserStore = defineStore("currentUser", {
       }
       return null;
     },
+    getToken: (state) => state.token,
     getEmail: (state) => state.email,
     getCompanyId: (state) => state.companyId,
     getCompanyName: (state) => state.companyName,
     isCompanyKsefAuthorized: (state) => state.companyKsefAuthorized,
   },
   actions: {
-    setUserData(userId: number, name: string, lastname: string, email: string) {
+    setToken(token: string) {
+      this.token = token;
+    },
+    setUserData(userId: number, name: string, lastname: string, email: string, token: string) {
       this.userId = userId;
       this.name = name;
       this.lastname = lastname;
       this.email = email;
+      this.token = token;
     },
     setCompanyData(companyId: number, companyName: string, companyKsefAuthorized: boolean) {
       this.companyId = companyId;
