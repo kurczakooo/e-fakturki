@@ -8,6 +8,8 @@ import { reactive, ref } from "vue";
 import { z } from "zod";
 
 import AppLogo from "../AppLogo.vue";
+import router from "../../router/router";
+import { userLogin, userSignUp, decodeToken } from "../../lib/services/authService";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
 
 const toast = useToast();
@@ -46,50 +48,84 @@ const loginResolver = zodResolver(
   }),
 );
 
+const loginDialog = ref(true);
+const visible = ref(true);
+
 const loginMutation = useMutation({
   mutationFn: async (values: any) => {
-    const loginResp = { user_id: 2, name: "Damian", lastname: "Karwat", email: values.email };
+    const loginResp = await userLogin({
+      grant_type: null,
+      username: values.email,
+      password: values.password,
+      scope: null,
+      client_id: null,
+      client_secret: null,
+    });
 
-    const checkCompanyResp = {
-      user_id: 2,
-      company_id: 1,
-      company_name: "Lukpol Warszawa",
-      ksef_auth: true,
-    };
-    return { loginResp, checkCompanyResp };
+    const userData = decodeToken(loginResp.access_token);
+
+    return { creds: userData, token: loginResp.access_token };
   },
   onSuccess: (data, variables) => {
     toast.add({ severity: "info", summary: "Zalogowano pomyślnie", life: 3000 });
     currentUserStore.setUserData(
-      data.loginResp.user_id,
-      data.loginResp.name,
-      data.loginResp.lastname,
-      data.loginResp.email,
+      data.creds.sub,
+      data.creds.name,
+      data.creds.last_name,
+      data.creds.email,
+      data.token,
     );
-    currentUserStore.setCompanyData(
-      data.checkCompanyResp.company_id,
-      data.checkCompanyResp.company_name,
-      data.checkCompanyResp.ksef_auth,
-    );
+    router.push("/sales");
   },
 
-  onError: () => {
-    toast.add({ severity: "error", summary: "Coś poszło nie tak", life: 3000 });
+  onError: (error: number) => {
+    if (error === 401) {
+      toast.add({ severity: "error", summary: "Nieprawidłowy email lub hasło", life: 4000 });
+    } else {
+      toast.add({ severity: "error", summary: "Coś poszło nie tak", life: 4000 });
+    }
   },
 });
 
 const registerMutation = useMutation({
   mutationFn: async (values: any) => {
-    const loginResp = { user_id: 2, name: "Damian", lastname: "Karwat", email: values.email };
-    return loginResp;
+    const registerResp = await userSignUp({
+      name: values.firstname,
+      last_name: values.lastname,
+      email: values.email,
+      password: values.password,
+    });
+
+    const userData = decodeToken(registerResp.access_token);
+
+    return { creds: userData, token: registerResp.access_token };
   },
   onSuccess: (data, variables) => {
     toast.add({ severity: "info", summary: "Zarejestrowano pomyślnie", life: 3000 });
-    currentUserStore.setUserData(data.user_id, data.name, data.lastname, data.email);
+
+    currentUserStore.setUserData(
+      data.creds.sub,
+      data.creds.name,
+      data.creds.last_name,
+      data.creds.email,
+      data.token,
+    );
+
+    console.log(currentUserStore.toString());
   },
 
-  onError: () => {
-    toast.add({ severity: "error", summary: "Coś poszło nie tak", life: 3000 });
+  onError: (error: number) => {
+    if (error === 401) {
+      toast.add({
+        severity: "error",
+        summary: "Adres e-mail już zajęty!",
+        life: 4000,
+      });
+    } else {
+      setTimeout(() => {
+        toast.add({ severity: "error", summary: "Coś poszło nie tak", life: 4000 });
+      }, 100);
+    }
   },
 });
 
@@ -100,29 +136,27 @@ const onFormSubmit = async (loggingIn: boolean, event: FormSubmitEvent) => {
   if (loggingIn) loginMutation.mutate(event.values);
   else registerMutation.mutate(event.values);
 };
-
-const login = ref(true);
 </script>
 
 <template>
-  <Dialog :visible="true" modal :closable="false" :draggable="false" :style="{ width: '40rem' }">
+  <Dialog :visible="visible" modal :closable="false" :draggable="false" :style="{ width: '40rem' }">
     <template #header>
       <div class="flex flex-1 justify-between">
         <AppLogo />
         <Button
           text
-          :label="login ? 'Zamiast tego zarejestruj się' : 'Wróć do logowania'"
-          @click="() => (login = !login)"
+          :label="loginDialog ? 'Zamiast tego zarejestruj się' : 'Wróć do logowania'"
+          @click="() => (loginDialog = !loginDialog)"
         />
       </div>
     </template>
     <span class="block mb-8 font-semibold">{{
-      login ? "Zaloguj się do systemu" : "Zarejestruj się w systemie"
+      loginDialog ? "Zaloguj się do systemu" : "Zarejestruj się w systemie"
     }}</span>
     <div class="card flex justify-center">
       <!-- LOGIN FORM -->
       <Form
-        v-if="login"
+        v-if="loginDialog"
         :initialValues
         :resolver="loginResolver"
         @submit="(event) => onFormSubmit(true, event)"
@@ -163,7 +197,7 @@ const login = ref(true);
       </Form>
       <!-- REGISTER FORM -->
       <Form
-        v-if="!login"
+        v-if="!loginDialog"
         :initialValues
         :resolver="registerResolver"
         @submit="(event) => onFormSubmit(false, event)"

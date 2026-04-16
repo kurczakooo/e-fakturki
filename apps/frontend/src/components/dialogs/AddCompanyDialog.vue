@@ -66,7 +66,7 @@ const resolver = zodResolver(
 const createCompanyWithAddressMutation = useMutation({
   mutationFn: async (values: any) => {
     const companyResp = await createCompany({
-      user_id: 1,
+      user_id: currentUserStore.getUserId,
       name: values.name,
       nip: values.nip,
       krs: values.krs == "" ? null : values.krs,

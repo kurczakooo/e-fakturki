@@ -6,7 +6,7 @@ import { Toolbar, Select, Button, Popover, useToast, Divider } from "primevue";
 import AppLogo from "./AppLogo.vue";
 import { useCurrentUserStore } from "../stores/currentUserStore";
 import { userLogout } from "../lib/services/authService";
-import router from "../router";
+import router from "../router/router";
 
 const currentUserStore = useCurrentUserStore();
 const toast = useToast();
