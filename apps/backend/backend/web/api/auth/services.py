@@ -4,7 +4,7 @@ from pwdlib import PasswordHash
 import jwt
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
-from jwt.exceptions import InvalidTokenError
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from pydantic import ValidationError
 from datetime import datetime, timedelta, timezone
 
@@ -33,7 +33,8 @@ def create_access_token(data: TokenData, expires_delta: timedelta | None = None)
             minutes=settings.access_token_expire_minutes
         )
 
-    to_encode["exp"] = expire
+    to_encode["exp"] = int(expire.timestamp())
+
     return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.algorithm)
 
 
@@ -42,29 +43,32 @@ async def get_current_user(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> UserRead:
     """Get the current user from the JWT token."""
-    token: Annotated[str, Depends(settings.oauth2_scheme)]
 
     try:
         payload = jwt.decode(
             token, settings.jwt_secret_key, algorithms=[settings.algorithm]
         )
+
         token_data = TokenData.model_validate(payload)
 
-        if datetime.fromtimestamp(token_data.exp, tz=timezone.utc) < datetime.now(
-            timezone.utc
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token has expired",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-    except (InvalidTokenError, ValidationError):
-        raise HTTPException from (InvalidTokenError, ValidationError)(
+    except ExpiredSignatureError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from e
+    except ValidationError as e:
+        raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from e
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from e
 
     user: UsersTable = await db_session.get(UsersTable, token_data.sub)
 
@@ -77,7 +81,7 @@ async def get_current_user(
 
     return UserRead(
         id=user.id,
-        email=user.email,
         name=user.name,
         last_name=user.last_name,
+        email=user.email,
     )

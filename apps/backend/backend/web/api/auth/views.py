@@ -33,7 +33,7 @@ async def signup_user(
     user = result.scalars().first()
     if user:
         raise HTTPException(
-            status_code=400,
+            status_code=401,
             detail="User with this email already exist",
         )
 
@@ -71,18 +71,14 @@ async def login_user(
         select(UsersTable).where(UsersTable.email == form_data.username)
     )
     user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=400,
-            detail="User with this email doesn't exist",
-        )
 
-    if not verify_password(
-        plain_password=form_data.password, hashed_password=user.password
+    if not user or not verify_password(
+        plain_password=form_data.password,
+        hashed_password=user.password,
     ):
         raise HTTPException(
-            status_code=400,
-            detail="Incorrect password",
+            status_code=401,
+            detail="Invalid credentials",
         )
 
     claims = TokenData(

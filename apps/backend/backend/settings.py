@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     reload: bool = False
 
     # Current environment
-    environment: str = "prod"
+    environment: str = "dev"
 
     # auth
     jwt_secret_key: str
@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     token_type: str = "bearer"  # noqa: S105
     oauth2_scheme: OAuth2PasswordBearer = OAuth2PasswordBearer(
-        tokenUrl="/login", scheme_name="JWT"
+        tokenUrl="/api/auth/login", scheme_name="JWT"
     )
 
     # KSeF environment

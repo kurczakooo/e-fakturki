@@ -1,7 +1,5 @@
 """Schemas for Auth."""
-
-from datetime import datetime, timedelta
-
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -15,11 +13,11 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     """Schema for data stored in JWT token."""
 
-    sub: int
+    sub: str
     email: str
     name: str
     last_name: str
-    exp: timedelta | None = None
+    exp: int | None = None
 
 
 class UserCreate(BaseModel):
@@ -31,17 +29,10 @@ class UserCreate(BaseModel):
     password: str = Field(..., description="User password")
 
 
-class UserRead(UserCreate):
+class UserRead(BaseModel):
     """Schema for reading a product record."""
 
-    id: int = Field(..., description="ID of the user")
-    is_active: bool = Field(..., description="Whether the user account is active")
-    created_at: datetime = Field(
-        ..., description="Timestamp of when the user was created"
-    )
-    updated_at: datetime = Field(
-        ..., description="Timestamp of when the user was last updated"
-    )
-
-    class Config:
-        from_attributes = True
+    id: str = Field(..., description="ID of the user")
+    name: str = Field(..., description="User name")
+    last_name: str = Field(..., description="User last name")
+    email: str = Field(..., description="User e-mail address")
