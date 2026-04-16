@@ -13,7 +13,7 @@ class CompaniesTable(Base):
     __tablename__ = "companies"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     nip: Mapped[str] = mapped_column(String(10), nullable=False, unique=True)
