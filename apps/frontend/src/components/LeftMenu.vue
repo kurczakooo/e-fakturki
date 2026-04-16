@@ -14,7 +14,7 @@ const items = ref([
         label: "Nowa Faktura",
         icon: "pi pi-plus",
         route: "/new-invoice",
-        disabled: true,
+        disabled: false,
       },
       {
         label: "Sprzedaż",
@@ -50,11 +50,11 @@ const items = ref([
   {
     label: "Aplikacja",
     items: [
-      {
-        label: "Tryb",
-        icon: "pi pi-sun",
-        command: toggleDarkMode,
-      },
+      //   {
+      //     label: "Tryb",
+      //     icon: "pi pi-sun",
+      //     command: toggleDarkMode,
+      //   },
       {
         label: "Ustawienia",
         icon: "pi pi-cog",
@@ -72,12 +72,18 @@ const items = ref([
       <template #item="{ item, props }">
         <router-link
           v-if="item.route"
-          v-slot="{ href, navigate }"
+          v-slot="{ href, navigate, isActive }"
           :to="item.route"
           custom
           :disabled="item.disabled"
         >
-          <a v-ripple :href="href" v-bind="props.action" @click="navigate">
+          <a
+            v-ripple
+            :href="href"
+            v-bind="props.action"
+            @click="navigate"
+            :class="['flex items-center w-full', { 'bg-primary-100 font-semibold': isActive }]"
+          >
             <span :class="item.icon" />
             <span class="ml-2">{{ item.label }}</span>
             <Badge
