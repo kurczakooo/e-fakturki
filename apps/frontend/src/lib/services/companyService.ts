@@ -10,7 +10,8 @@ export const createCompany = async (
   try {
     const response = await axios.post<CompanyCreationResponse>(baseUrl, data);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    console.log(error.response?.data?.detail);
     throw error;
   }
 };

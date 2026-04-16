@@ -45,6 +45,8 @@ export const refreshInvoiceListFromKsef = async (
 
     return response.data;
   } catch (error) {
+    console.log(error.response?.data?.detail);
+
     throw error;
   }
 };

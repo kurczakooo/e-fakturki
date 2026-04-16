@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 export const useCurrentUserStore = defineStore("currentUser", {
   state: () => {
     return {
-      userId: null as number | null,
+      userId: "" as string,
       name: null as string | null,
       lastname: null as string | null,
       email: null as string | null,
@@ -48,6 +48,9 @@ export const useCurrentUserStore = defineStore("currentUser", {
     },
     setCompanyKsefAuthorizationStatus(status: boolean) {
       this.companyKsefAuthorized = status;
+    },
+    toString() {
+      return `CurrentUserStore: { userId: ${this.userId}, name: ${this.name}, lastname: ${this.lastname}, email: ${this.email}, token: ${this.token}, companyId: ${this.companyId}, companyName: ${this.companyName}, companyKsefAuthorized: ${this.companyKsefAuthorized} }`;
     },
   },
 });

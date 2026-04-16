@@ -17,6 +17,8 @@ export const getInvoicesList = async (
 
     return response.data;
   } catch (error) {
+    console.log(error.response?.data?.detail);
+
     throw error;
   }
 };
