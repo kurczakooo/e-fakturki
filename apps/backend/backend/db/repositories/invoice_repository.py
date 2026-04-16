@@ -76,7 +76,7 @@ async def get_company_invoices_list(
     company_nip: str,
     invoice_type: Literal["sales", "purchase"],
 ) -> InvoicesListResponse:
-    """Returns all invoices from the db, paginated."""
+    """Returns a list of invoices from the db, filtered and paginated."""
 
     # Decide on the filter condition
     if invoice_type == "sales":
