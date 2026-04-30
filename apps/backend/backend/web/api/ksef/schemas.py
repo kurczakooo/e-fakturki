@@ -84,11 +84,11 @@ class SalesInvoicesRequest(BaseModel):
     )
     date_from: str = Field(
         ...,
-        description="The start date of the date range for which to retrieve invoice metadata, in ISO format.",
+        description="The start date of the date range for which to retrieve invoice metadata (yyyy-mm-dd)",
     )
     date_to: str = Field(
         ...,
-        description="The end date of the date range for which to retrieve invoice metadata, in ISO format.",
+        description="The end date of the date range for which to retrieve invoice metadata (yyyy-mm-dd)",
     )
     page_size: int = Field(
         10,
