@@ -72,8 +72,9 @@ class InvoicesBriefTable(Base):
 
     invoice_entries = relationship("InvoiceEntriesTable", back_populates="invoice")
 
-    invoices_payment_details = relationship("InvoicesPaymentTable", back_populates="invoice")
-
+    invoices_payment_details = relationship(
+        "InvoicesPaymentTable", back_populates="invoice"
+    )
 
     invoice_xml_snapshots = relationship(
         "InvoiceXmlSnapshotsTable", back_populates="invoice"
