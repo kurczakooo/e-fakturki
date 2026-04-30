@@ -6,6 +6,7 @@ import type {
   getInvoicesListRequest,
 } from "../types/ksef";
 import { apiConfig } from "../../config";
+import type { InvoiceResponse } from "../types/invoices";
 
 const baseUrl = apiConfig.apiBaseUrl + apiConfig.endpoints.ksef;
 
@@ -43,6 +44,23 @@ export const refreshInvoiceListFromKsef = async (
       },
     });
 
+    return response.data;
+  } catch (error) {
+    console.log(error.response?.data?.detail);
+
+    throw error;
+  }
+};
+
+export const getInvoiceDetails = async (
+  company_id: number,
+  invoice_id: string,
+): Promise<InvoiceResponse> => {
+  try {
+    const response = await axios.post<InvoiceResponse>(
+      `${baseUrl}/single_invoice_download/${company_id}/${invoice_id}`,
+    );
+    console.log(response.data);
     return response.data;
   } catch (error) {
     console.log(error.response?.data?.detail);
