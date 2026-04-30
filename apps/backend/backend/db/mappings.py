@@ -1,1 +1,0 @@
-"""Mappings for database models."""
