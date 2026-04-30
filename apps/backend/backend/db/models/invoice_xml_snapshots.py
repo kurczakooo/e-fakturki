@@ -1,6 +1,6 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from uuid import uuid4
 
 from backend.db.base import Base
 
@@ -10,12 +10,14 @@ class InvoiceXmlSnapshotsTable(Base):
 
     __tablename__ = "invoice_xml_snapshots"
 
-    id = Column(Integer, primary_key=True, index=True)
-    invoice_id = Column(Integer, ForeignKey("invoices.id"), nullable=False)
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid4())
+    )
+    invoice_id: Mapped[str] = mapped_column(
+        String, ForeignKey("invoices_brief.id"), nullable=False
+    )
 
-    xml = Column(String, nullable=False)
+    xml: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    sha256_base64: Mapped[str] = mapped_column(String, nullable=False, unique=True)
 
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-
-    invoice = relationship("InvoicesTable", back_populates="invoice_xml_snapshots")
+    invoice = relationship("InvoicesBriefTable", back_populates="invoice_xml_snapshots")
