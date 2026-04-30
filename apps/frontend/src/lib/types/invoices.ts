@@ -1,4 +1,44 @@
-// type representing invoice
+export const ksefStatusSeverity = {
+  not_sent: "warn",
+  sent: "info",
+  rejected: "danger",
+  accepted: "success",
+};
+
+export const ksefStatusHint = {
+  not_sent: "Nie wysłano do KSeF",
+  sent: "W trakcie wysyłania do KSeF",
+  rejected: "Faktura odrzucona przez KSeF",
+  accepted: "Faktura obecna w systemie KSeF",
+};
+
+export const paymentType = {
+  1: "Gotówka",
+  2: "Karta",
+  3: "Bon",
+  4: "Czek",
+  5: "Kredyt/Pożyczka",
+  6: "Przelew",
+  7: "Płatność mobilna",
+};
+
+export const paymentStatus = {
+  paid: "Opłacono",
+  partial: "Częściowo opłacono",
+  unpaid: "Nie opłacono",
+};
+
+export const paymentStatusSeverity = {
+  paid: "success",
+  partial: "warn",
+  unpaid: "danger",
+};
+
+export const paymentOptions = [
+  { label: "Nie opłacono", value: "unpaid" },
+  { label: "Opłacono", value: "paid" },
+  { label: "Częściowo opłacono", value: "partial" },
+];
 
 export interface InvoiceEntry {
   row_number: number;
