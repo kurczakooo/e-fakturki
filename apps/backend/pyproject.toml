@@ -142,6 +142,11 @@ line-length = 88
     "S101",    # Use of assert detected
 	"PLC0415", # Import outside toplevel
 ]
+"backed/domain/fa3_xml_utils/models/*" = [
+    "D200",    # One-line docstring should fit on one line
+    "D101",    # Missing docstring in public class
+    "RUF002",  # Docstring contains ambiguous characters
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
