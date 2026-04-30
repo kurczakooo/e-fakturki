@@ -12,7 +12,7 @@ const currentUserStore = useCurrentUserStore();
 const toast = useToast();
 
 const userPopup = ref();
-const toggleuserPopup = (event: any) => {
+const toggleUserPopup = (event: any) => {
   userPopup.value.toggle(event);
 };
 
@@ -42,7 +42,7 @@ const userName = computed(() => currentUserStore.getFullName);
           emptyMessage="Brak opcji do wyboru"
         />
         <p>{{ userName ? userName : "Zaloguj się" }}</p>
-        <Button icon="pi pi-user" raised rounded @click="toggleuserPopup" />
+        <Button icon="pi pi-user" raised rounded @click="toggleUserPopup" />
       </div>
     </template>
   </Toolbar>

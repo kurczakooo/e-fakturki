@@ -11,6 +11,7 @@ import AppLogo from "../AppLogo.vue";
 import router from "../../router/router";
 import { userLogin, userSignUp, decodeToken } from "../../lib/services/authService";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
+import { getUserCompany } from "../../lib/services/companyService";
 
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
@@ -51,6 +52,31 @@ const loginResolver = zodResolver(
 const loginDialog = ref(true);
 const visible = ref(true);
 
+const getCompanyMutation = useMutation({
+  mutationFn: async () => {
+    return await getUserCompany({
+      user_id: currentUserStore.getUserId,
+    });
+  },
+  onSuccess: (data) => {
+    toast.add({ severity: "info", summary: "Poprawnie załadowano dane firmy", life: 3000 });
+    currentUserStore.setCompanyData(data.company_id, data.name, data.ksef_authorized);
+  },
+  onError: (error: number) => {
+    if (error == 404) {
+      toast.add({ severity: "error", summary: "Użytkownik nie ma dodanej firmy", life: 3000 });
+    } else if (error == 409) {
+      toast.add({
+        severity: "warning",
+        summary: "Firma użytkownika nie zautoryzowana w KSeF",
+        life: 3000,
+      });
+    } else {
+      toast.add({ severity: "error", summary: "Błąd podczas pobierania danych firmy", life: 3000 });
+    }
+  },
+});
+
 const loginMutation = useMutation({
   mutationFn: async (values: any) => {
     const loginResp = await userLogin({
@@ -66,7 +92,7 @@ const loginMutation = useMutation({
 
     return { creds: userData, token: loginResp.access_token };
   },
-  onSuccess: (data, variables) => {
+  onSuccess: async (data, variables) => {
     toast.add({ severity: "info", summary: "Zalogowano pomyślnie", life: 3000 });
     currentUserStore.setUserData(
       data.creds.sub,
@@ -75,6 +101,9 @@ const loginMutation = useMutation({
       data.creds.email,
       data.token,
     );
+
+    await getCompanyMutation.mutateAsync();
+
     router.push("/sales");
   },
 
@@ -110,8 +139,6 @@ const registerMutation = useMutation({
       data.creds.email,
       data.token,
     );
-
-    console.log(currentUserStore.toString());
   },
 
   onError: (error: number) => {
