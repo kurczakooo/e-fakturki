@@ -1,6 +1,5 @@
 import Aura from "@primeuix/themes/aura";
 import { definePreset } from "@primeuix/themes";
-import { locales } from "zod";
 
 export const apiConfig = {
   apiBaseUrl: "http://localhost:8000/api",
@@ -9,8 +8,6 @@ export const apiConfig = {
     ksef: "/ksef",
     auth: "/auth",
     companies: "/companies",
-    addresses: "/addresses",
-    bankAccounts: "/bank-accounts",
     invoices: "/invoices",
     users: "/users",
     products: "/products",
@@ -45,6 +42,7 @@ export const primeVueConfig = {
     preset: customPreset,
     options: {
       prefix: "prime",
+      //   darkModeSelector: ".prime-dark-mode",
       darkModeSelector: "system",
     },
   },
