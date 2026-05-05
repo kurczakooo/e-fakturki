@@ -60,7 +60,17 @@ const getCompanyMutation = useMutation({
   },
   onSuccess: (data) => {
     toast.add({ severity: "info", summary: "Poprawnie załadowano dane firmy", life: 3000 });
-    currentUserStore.setCompanyData(data.company_id, data.name, data.ksef_authorized);
+    currentUserStore.setCompanyData(
+      data.company_id,
+      data.name,
+      data.nip,
+      data.country_code,
+      data.address_l1,
+      data.address_l2,
+      data.email,
+      data.phone_number,
+      data.ksef_authorized,
+    );
   },
   onError: (error: number) => {
     if (error == 404) {

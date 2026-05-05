@@ -9,3 +9,7 @@ export function formatLocalDate(date: Date) {
 
   return `${yyyy}-${mm}-${dd}`;
 }
+
+export function emptyToNull(value?: string | null) {
+  return value === "" ? null : value;
+}
