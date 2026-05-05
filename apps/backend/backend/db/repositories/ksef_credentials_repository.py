@@ -14,18 +14,20 @@ class KsefCertificatesLoad(BaseModel):
 
 
 async def get_ksef_credentials(
-    db: AsyncSession, company_id: int
+    db: AsyncSession, company_id: str
 ) -> KsefCredentialsTable | None:
     """Get the KSeF credentials for the company with given ID."""
-    stmt = select(KsefCredentialsTable).where(
-        KsefCredentialsTable.company_id == company_id
+    stmt = (
+        select(KsefCredentialsTable)
+        .where(KsefCredentialsTable.company_id == company_id)
+        .limit(1)
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
 async def get_auth_certs(
-    db_session: AsyncSession, company_id: int
+    db_session: AsyncSession, company_id: str
 ) -> KsefCertificatesLoad:
     """Loads cert, private_key and private_key_password from the database."""
     stmt = (

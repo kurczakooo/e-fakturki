@@ -58,6 +58,13 @@ async def insert_invoice_brief_from_ksef(db: AsyncSession, invoice_data: dict) -
         return None
 
 
+async def insert_invoice_brief_batch(
+    db: AsyncSession, invoices: list[dict]
+) -> list[str]:
+    """Inserts a batch of invoices into the database."""
+    return [await insert_invoice_brief_from_ksef(db, invoice) for invoice in invoices]
+
+
 async def get_company_invoices_list(
     db: AsyncSession,
     filters: SalesInvoicesRequest,
