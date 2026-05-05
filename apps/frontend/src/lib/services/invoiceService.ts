@@ -18,7 +18,18 @@ export const getInvoicesList = async (
     return response.data;
   } catch (error) {
     console.log(error.response?.data?.detail);
+    throw error;
+  }
+};
 
+export const updateInvoiceIsNew = async (invoice_id: string, is_new: boolean): Promise<number> => {
+  try {
+    const response = await axios.patch(`${baseUrl}/${invoice_id}/is-new`, {
+      is_new: is_new,
+    });
+    return response.status;
+  } catch (error) {
+    console.log(error.response?.data?.detail);
     throw error;
   }
 };

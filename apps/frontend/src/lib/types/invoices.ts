@@ -5,6 +5,13 @@ export const ksefStatusSeverity = {
   accepted: "success",
 };
 
+export const ksefStatusIcon = {
+  not_sent: "pi pi-hourglass",
+  sent: "pi pi-send",
+  rejected: "pi pi-times",
+  accepted: "pi pi-check-circle",
+};
+
 export const ksefStatusHint = {
   not_sent: "Nie wysłano do KSeF",
   sent: "W trakcie wysyłania do KSeF",
@@ -39,6 +46,8 @@ export const paymentOptions = [
   { label: "Opłacono", value: "paid" },
   { label: "Częściowo opłacono", value: "partial" },
 ];
+
+export type invoiceTableType = "sales" | "purchases";
 
 export interface InvoiceEntry {
   row_number: number;
