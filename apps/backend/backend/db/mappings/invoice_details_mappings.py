@@ -33,8 +33,12 @@ def map_fa3_to_invoice_details_table(
         if fa3.podmiot1.dane_kontaktowe
         else None,
         ###
-        buyer_address_l1=fa3.podmiot2.adres.adres_l1,
-        buyer_address_l2=fa3.podmiot2.adres.adres_l2,
+        buyer_address_l1=fa3.podmiot2.adres.adres_l1
+        if fa3.podmiot2.adres.adres_l1
+        else None,
+        buyer_address_l2=fa3.podmiot2.adres.adres_l2
+        if fa3.podmiot2.adres.adres_l2
+        else None,
         buyer_email=fa3.podmiot2.dane_kontaktowe[0].email
         if fa3.podmiot2.dane_kontaktowe
         else None,
