@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class CredentialsCreate(BaseModel):
     """Schema for creating KSeF credentials."""
 
-    company_id: int = (
+    company_id: str = (
         Form(
             ..., description="The ID of the company to which the certificates belong."
         ),
@@ -30,7 +30,7 @@ class CredentialsCreate(BaseModel):
 class CredentialsCreateResponse(BaseModel):
     """Return schema for creating KSeF credentials."""
 
-    company_id: int = Field(
+    company_id: str = Field(
         ..., description="The ID of the company to which the certificates belong."
     )
     credentials_id: int = Field(
@@ -42,7 +42,7 @@ class CredentialsCreateResponse(BaseModel):
 class KsefInvoiceUploadStatus(BaseModel):
     """Schema for reading invoice KSeF upload status."""
 
-    company_id: int = Field(
+    company_id: str = Field(
         ..., description="The ID of the company that issued the invoice."
     )
     invoice_id: int = Field(
@@ -70,7 +70,7 @@ class KsefCertificatesLoad(BaseModel):
 class KsefInvoiceDownload(BaseModel):
     """Schema for downloading invoice from KSeF."""
 
-    company_id: int
+    company_id: str
     invoice_id: int
 
     data: str
@@ -79,7 +79,7 @@ class KsefInvoiceDownload(BaseModel):
 class SalesInvoicesRequest(BaseModel):
     """Schema for requesting sales invoices metadata list from KSeF."""
 
-    company_id: int = Field(
+    company_id: str = Field(
         ..., description="The ID of the company selected in the system as the seller."
     )
     date_from: str = Field(

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from ksef_client import KsefClient, KsefClientOptions
+from ksef_client.exceptions import KsefRateLimitError
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Literal
 
@@ -10,23 +11,26 @@ from backend.services.ksef.auth.certificate_auth import (
     certificate_str_to_temp_file,
     remove_temp_file,
 )
+from backend.web.api.auth.schemas import UserRead
+from backend.web.api.auth.services import get_current_user
 from backend.services.ksef.auth.ksef_session import open_ksef_session
-
 from backend.web.api.ksef.schemas import SalesInvoicesRequest
-from backend.web.api.ksef.services import get_auth_certs, to_iso
-from backend.db.repositories.invoice_repository import insert_invoice
+from backend.web.api.ksef.services import to_iso
+from backend.db.repositories.invoices_brief_repository import insert_invoice_brief_batch
+from backend.db.repositories.ksef_credentials_repository import get_auth_certs
 
 from backend.settings import Settings
 
 router = APIRouter()
 
 
-@router.post("/invoices", status_code=200, response_model=list[str])
+@router.post("/invoices", status_code=200)
 async def get_invoices_list(
     payload: SalesInvoicesRequest,
     invoice_type: Literal["sales", "purchase"],
+    current_user: UserRead = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_db_session),
-) -> list[str]:
+) -> list[dict]:
     """
     Download the invoices metadata list from KSeF and save them to the DB.
 
@@ -46,7 +50,7 @@ async def get_invoices_list(
         "dateRange": {
             "dateType": "PermanentStorage",
             "from": to_iso(payload.date_from),
-            "to": to_iso(payload.date_to),
+            "to": to_iso(payload.date_to, end_of_day=True),
         },
     }
 
@@ -57,40 +61,44 @@ async def get_invoices_list(
             for c in certs
             if "SymmetricKeyEncryption" in (c.get("usage") or [])
         )
+        try:
+            # authenticate with certs
+            access_token = (
+                authorize_ksef_with_certificate(
+                    certificate_path=cert_path,
+                    private_key_path=key_path,
+                    private_key_password=password,
+                    client=client,
+                    context_id_value=company_nip,
+                )
+            ).tokens.access_token.token
 
-        # authenticate with certs
-        access_token = (
-            authorize_ksef_with_certificate(
-                certificate_path=cert_path,
-                private_key_path=key_path,
-                private_key_password=password,
-                client=client,
-                context_id_value=company_nip,
+            ksef_session_params = open_ksef_session(
+                client=client, access_token=access_token, sym_cert=sym_cert
             )
-        ).tokens.access_token.token
+            metadata = client.invoices.query_invoice_metadata(
+                request_payload,
+                access_token=access_token,
+                page_offset=payload.page_offset,
+                page_size=payload.page_size,
+                sort_order="Desc",
+            )
+        except KsefRateLimitError as e:
+            raise HTTPException(
+                status_code=429,
+                detail="Przekroczono limit 20 żądań na minutę w KSeF. Spróbuj ponownie po 30 sekundach.",
+            ) from e
+        except Exception:
+            raise
+        finally:
+            if ksef_session_params is not None:
+                ksef_session_params.workflow.close_session(
+                    ksef_session_params.session.session_reference_number, access_token
+                )
+                remove_temp_file(cert_path)
+                remove_temp_file(key_path)
 
-        ksef_session_params = open_ksef_session(
-            client=client, access_token=access_token, sym_cert=sym_cert
-        )
-
-        metadata = client.invoices.query_invoice_metadata(
-            request_payload,
-            access_token=access_token,
-            page_offset=payload.page_offset,
-            page_size=payload.page_size,
-            sort_order="Desc",
-        )
         invoices = metadata.get("invoices") or metadata.get("invoiceList") or []
+        await insert_invoice_brief_batch(db_session, invoices)
 
-        ids = []
-        for inv in invoices:
-            inv_id = await insert_invoice(db_session, inv)
-            ids.append(inv_id)
-
-        ksef_session_params.workflow.close_session(
-            ksef_session_params.session.session_reference_number, access_token
-        )
-        remove_temp_file(cert_path)
-        remove_temp_file(key_path)
-
-    return ids
+    return invoices

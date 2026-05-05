@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.web.api.auth.schemas import UserRead
+from backend.web.api.auth.services import get_current_user
 from backend.web.api.ksef.schemas import CredentialsCreateResponse
 from backend.db.dependencies import get_db_session
 from backend.db.models.ksef_credentials import KsefCredentialsTable
@@ -10,7 +12,7 @@ router = APIRouter()
 
 @router.post("/certificates", status_code=201, response_model=CredentialsCreateResponse)
 async def upload_ksef_certificates(
-    company_id: int = Form(
+    company_id: str = Form(
         ..., description="The ID of the company to which the certificates belong."
     ),
     certificates_for_auth: bool = Form(
@@ -24,6 +26,7 @@ async def upload_ksef_certificates(
         ..., description="The private key file to be uploaded."
     ),
     password: str = Form(..., description="The password for the private key."),
+    current_user: UserRead = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_db_session),
 ) -> CredentialsCreateResponse:
     """Uploads KSeF certificates for a company to the database."""
