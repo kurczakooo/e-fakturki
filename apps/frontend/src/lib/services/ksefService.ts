@@ -4,6 +4,7 @@ import type {
   KsefCredentialsCreationRequest,
   KsefCredentialsCreationResponse,
   getInvoicesListRequest,
+  postInvoiceToKsefResponse,
 } from "../types/ksef";
 import { apiConfig } from "../../config";
 import type { InvoiceResponse } from "../types/invoices";
@@ -46,8 +47,6 @@ export const refreshInvoiceListFromKsef = async (
 
     return response.data;
   } catch (error) {
-    console.log(error.response?.data?.detail);
-
     throw error;
   }
 };
@@ -63,8 +62,20 @@ export const getInvoiceDetails = async (
     console.log(response.data);
     return response.data;
   } catch (error) {
-    console.log(error.response?.data?.detail);
+    throw error;
+  }
+};
 
+export const postInvoiceToKsef = async (
+  company_id: number,
+  invoice_id: string,
+): Promise<postInvoiceToKsefResponse> => {
+  try {
+    const response = await axios.post<postInvoiceToKsefResponse>(
+      `${baseUrl}/single_invoice_upload/${company_id}/${invoice_id}`,
+    );
+    return response.data;
+  } catch (error) {
     throw error;
   }
 };

@@ -6,7 +6,7 @@ export interface KsefCredentials {
 }
 
 export interface KsefCredentialsCreationRequest {
-  company_id: number;
+  company_id: string;
   certificates_for_auth: boolean;
   certificate: File;
   private_key: File;
@@ -14,14 +14,14 @@ export interface KsefCredentialsCreationRequest {
 }
 
 export interface KsefCredentialsCreationResponse {
-  company_id: number;
+  company_id: string;
   credentials_id: number;
 }
 
 const invoiceTypes = ["purchase", "sales"] as const;
 export type InvoiceType = (typeof invoiceTypes)[number];
 export interface getInvoicesListRequest {
-  company_id: number;
+  company_id: string;
   date_from: string;
   date_to: string;
   page_size: number;
@@ -43,7 +43,7 @@ export interface invoiceListItem {
   ksef_status: string;
 }
 
-interface pageInfo {
+export interface pageInfo {
   current_page: number;
   page_size: number;
   total_items: number;
@@ -54,4 +54,11 @@ interface pageInfo {
 export interface getInvoicesListResponse {
   invoices: invoiceListItem[];
   page_info: pageInfo;
+}
+
+export interface postInvoiceToKsefResponse {
+  ksef_number: string;
+  invoicing_date: string;
+  acquisition_date: string;
+  permanent_storage_date: string;
 }

@@ -2,66 +2,36 @@
 import { ref, onMounted } from "vue";
 
 import { DataTable, Column, Button, Tag, Select, DatePicker, useToast, FloatLabel } from "primevue";
-import InvoiceDetails from "../dialogs/InvoiceDetails.vue";
-import { getInvoicesList } from "../../lib/services/invoiceService";
+import InvoiceDetails from "./InvoiceDetails.vue";
+import { getInvoicesList, updateInvoiceIsNew } from "../../lib/services/invoiceService";
 import { useMutation } from "@tanstack/vue-query";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
 import type { invoiceListItem } from "../../lib/types/ksef";
+import {
+  ksefStatusIcon,
+  ksefStatusHint,
+  ksefStatusSeverity,
+  paymentStatus,
+  paymentStatusSeverity,
+  paymentOptions,
+} from "../../lib/types/invoices";
+import type { invoiceTableType } from "../../lib/types/invoices";
 import { useInvoicesStore } from "../../stores/invoicesStore";
 import { formatLocalDate } from "../../lib/utils";
 import { refreshInvoiceListFromKsef } from "../../lib/services/ksefService";
-// import items from "../../assets/mock_invoices";
 
 const props = defineProps<{
-  invoice_type: string;
+  table_type: invoiceTableType;
 }>();
 
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
 const invoicesStore = useInvoicesStore();
-
-// Invoice in KSeF status
-const ksefStatusIcon = {
-  not_sent: "pi pi-hourglass",
-  sent: "pi pi-send",
-  rejected: "pi pi-times",
-  accepted: "pi pi-check-circle",
-};
-const ksefStatusSeverity = {
-  not_sent: "warn",
-  sent: "info",
-  rejected: "danger",
-  accepted: "success",
-};
-const ksefStatusHint = {
-  not_sent: "Nie wysłano do KSeF",
-  sent: "W trakcie wysyłania do KSeF",
-  rejected: "Faktura odrzucona przez KSeF",
-  accepted: "Faktura obecna w systemie KSeF",
-};
-// Invoice payment status
-const paymentType = {
-  bank_transfer: "Przelew",
-  cash: "Gotówka",
-};
-const paymentStatus = {
-  paid: "Opłacono",
-  partial: "Częściowo opłacono",
-  unpaid: "Nie opłacono",
-};
-const paymentStatusSeverity = {
-  paid: "success",
-  partial: "warn",
-  unpaid: "danger",
-};
-const paymentOptions = [
-  { label: "Nie opłacono", value: "unpaid" },
-  { label: "Opłacono", value: "paid" },
-  { label: "Częściowo opłacono", value: "partial" },
-];
-
-const tableType = props.invoice_type == "sales" ? "Faktury sprzedażowe" : "Faktury zakupowe";
-const dateRange = ref<Date[]>([new Date(2026, 0, 1), new Date()]);
+const tableType = props.table_type == "sales" ? "Faktury sprzedażowe" : "Faktury zakupowe";
+const dateRange = ref<Date[]>([
+  new Date(new Date().setMonth(new Date().getMonth() - 3)),
+  new Date(),
+]);
 const selectedInvoice = ref(null);
 const selectedInvoiceData = ref<any>(null);
 const dialogVisible = ref(false);
@@ -72,12 +42,18 @@ const pageSize = ref(10);
 const first = ref(0);
 const totalRecords = ref(0);
 
+function addDays(date: Date, days: number): Date {
+  const newDate = new Date(date);
+  newDate.setDate(newDate.getDate() + days);
+  return newDate;
+}
+
 const getInvoicesMutation = useMutation({
   mutationFn: async (values: any) => {
     const invoice_ksef_ids = await refreshInvoiceListFromKsef(
       {
         company_id: values.company_id,
-        date_from: values.date_from,
+        date_from: addDays(values.date_from, 1),
         date_to: values.date_to,
         page_size: values.page_size,
         page_offset: values.page_offset,
@@ -95,31 +71,45 @@ const getInvoicesMutation = useMutation({
       },
       values.invoice_type,
     );
-    return list_data;
+    return { invoice_ksef_ids, list_data };
   },
 
   onSuccess: (data) => {
-    sortedInvoices.value = data.invoices.sort((a, b) => Number(b.is_new) - Number(a.is_new));
-    totalRecords.value = data.page_info.total_items;
+    // sortedInvoices.value = data.invoices.sort((a, b) => Number(b.is_new) - Number(a.is_new));
+    sortedInvoices.value = data.list_data.invoices;
+    totalRecords.value = data.list_data.page_info.total_items;
 
-    if (props.invoice_type === "sales") {
-      invoicesStore.setSalesInvoicesCount(data.invoices.filter((inv) => inv.is_new).length);
-      console.log(sortedInvoices.value);
+    if (props.table_type === "sales") {
+      invoicesStore.setSalesInvoicesCount(
+        data.list_data.invoices.filter((inv) => inv.is_new).length,
+      );
     } else {
-      invoicesStore.setPurchaseInvoicesCount(data.invoices.filter((inv) => inv.is_new).length);
+      invoicesStore.setPurchaseInvoicesCount(
+        data.list_data.invoices.filter((inv) => inv.is_new).length,
+      );
     }
 
     toast.add({ severity: "info", summary: "Pomyślnie pobrano faktury.", life: 3000 });
   },
 
-  onError: (data) => {
-    toast.add({ severity: "error", summary: "Błąd w pobieraniu faktur." + data, life: 3000 });
+  onError: (error) => {
+    toast.add({
+      severity: "error",
+      summary: "Błąd w pobieraniu faktur\n" + error?.response?.data?.detail,
+      life: 5000,
+    });
   },
 });
 
-function onInvoiceSelect(event: any) {
+async function onInvoiceSelect(event: any) {
   // dont allow for selection when editing
   if (isEditing.value) return;
+
+  // remove new flag
+  if (event.data.is_new) {
+    const response = await updateInvoiceIsNew(event.data.id, false);
+    if (response === 204) event.data.is_new = false;
+  }
 
   selectedInvoiceData.value = event.data;
   dialogVisible.value = true;
@@ -148,7 +138,7 @@ function onPageChange(event: any) {
     date_to: formatLocalDate(dateRange.value[1]),
     page_size: pageSize.value,
     page_offset: event.first,
-    invoice_type: props.invoice_type,
+    invoice_type: props.table_type,
   });
 }
 
@@ -161,7 +151,7 @@ function refreshInvoices() {
     date_to: formatLocalDate(dateRange.value[1]),
     page_size: pageSize.value,
     page_offset: 0,
-    invoice_type: props.invoice_type,
+    invoice_type: props.table_type,
   });
 }
 
@@ -176,8 +166,15 @@ function setCustomDateRange(range: string) {
     case "month":
       startDate.setMonth(now.getMonth() - 1);
       break;
+    case "3months":
+      startDate.setMonth(now.getMonth() - 3);
+      break;
     case "year":
-      startDate.setFullYear(now.getFullYear() - 1);
+      if (now.getFullYear() == 2026) {
+        startDate.setFullYear(2026, 0, 1);
+      } else {
+        startDate.setFullYear(now.getFullYear() - 1);
+      }
       break;
     case "full":
       startDate.setFullYear(2026, 0, 1);
@@ -282,6 +279,12 @@ onMounted(() => {
                   />
                   <Button
                     size="small"
+                    label="Ostatnie 3 miesiące"
+                    outlined
+                    @click="() => setCustomDateRange('3months')"
+                  />
+                  <Button
+                    size="small"
                     label="Ostatni rok"
                     outlined
                     @click="() => setCustomDateRange('year')"
@@ -330,7 +333,7 @@ onMounted(() => {
     <Column sortable header="Kontrahent" style="width: 20%">
       <template #body="slotProps">
         <span>{{
-          props.invoice_type === "sales" ? slotProps.data.buyer_name : slotProps.data.seller_name
+          props.table_type === "sales" ? slotProps.data.buyer_name : slotProps.data.seller_name
         }}</span>
       </template>
     </Column>
@@ -377,5 +380,9 @@ onMounted(() => {
     <Column :rowEditor="true" bodyStyle="text-align:left" style="width: 10%"></Column>
   </DataTable>
   <!-- Invoice details dialog -->
-  <InvoiceDetails v-model:visible="dialogVisible" :invoice="selectedInvoiceData" />
+  <InvoiceDetails
+    v-model:visible="dialogVisible"
+    :invoice="selectedInvoiceData"
+    :table_type="props.table_type"
+  />
 </template>
