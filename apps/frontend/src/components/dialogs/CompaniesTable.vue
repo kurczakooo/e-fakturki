@@ -22,6 +22,7 @@ import {
 import type { CompanyDetails, CompanyListItem } from "../../lib/types/company";
 import DeleteConfirmDialog from "./DeleteConfirmDialog.vue";
 import CompanyInfoForm from "../inputs/CompanyInfoForm.vue";
+import CompanyEditForm from "../inputs/CompanyEditForm.vue";
 
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
@@ -33,8 +34,10 @@ const sortedCompanies = ref<CompanyListItem[]>([]);
 const pageSize = ref(10);
 const first = ref(0);
 const totalRecords = ref(0);
-const companyToEdit = ref<CompanyListItem>();
+const companyToEdit = ref<CompanyListItem | null>(null);
+const companyToEditDetails = ref<CompanyDetails | null>(null);
 const addCompanyDialog = ref(false);
+const editCompanyDialog = ref(false);
 const deleteCompanyDialog = ref(false);
 
 const getCompaniesMutation = useMutation({
@@ -146,6 +149,7 @@ async function onSeachSubmit() {
 
 async function removeFilters() {
   searchFilters.value = "";
+  first.value = 0;
   await getCompaniesMutation.mutate({
     search_string: searchFilters.value,
     page_size: pageSize.value,
@@ -157,9 +161,22 @@ function addNewCompany() {
   addCompanyDialog.value = true;
 }
 
-function editCompany() {}
+async function editCompany(company: CompanyListItem) {
+  companyToEdit.value = null;
+  companyToEditDetails.value = null;
+  companyToEdit.value = company;
+  if (!expandedCompaniesDetails.value[company.id]) {
+    const details = await getCompanyDetailsMutation.mutateAsync(company);
+    companyToEditDetails.value = details;
+  } else {
+    companyToEditDetails.value = expandedCompaniesDetails.value[company.id];
+  }
+  editCompanyDialog.value = true;
+}
 
 function confirmDeleteCompany(company: CompanyListItem) {
+  companyToEdit.value = null;
+  companyToEditDetails.value = null;
   companyToEdit.value = company;
   deleteCompanyDialog.value = true;
 }
@@ -281,7 +298,7 @@ onMounted(() => {
     </Column>
     <Column field="phone_number" header="Nr. telefonu" style="width: 10%">
       <template #body="slotProps">
-        <span v-if="slotProps.data.phone">{{ slotProps.data.phone }}</span>
+        <span v-if="slotProps.data.phone_number">{{ slotProps.data.phone_number }}</span>
         <span v-else>-</span>
       </template>
     </Column>
@@ -298,6 +315,7 @@ onMounted(() => {
           variant="outlined"
           severity="danger"
           @click="confirmDeleteCompany(slotProps.data)"
+          :disabled="slotProps.data.id === currentUserStore.getCompanyId"
         /> </template
     ></Column>
     <template #expansion="slotProps">
@@ -312,13 +330,13 @@ onMounted(() => {
         </div>
         <div class="flex flex-col gap-2">
           <span class="font-semibold">Adres korespondencyjny</span>
-          <div>
-            <span>{{
-              expandedCompaniesDetails[slotProps.data.id]?.address_correspondance_l1 || "-, "
-            }}</span>
-            <span>{{
-              expandedCompaniesDetails[slotProps.data.id]?.address_correspondance_l2 || "-"
-            }}</span>
+          <div class="flex flex-col">
+            <span>
+              {{ expandedCompaniesDetails[slotProps.data.id].address_correspondance_l1 || "-" }}
+            </span>
+            <span>
+              {{ expandedCompaniesDetails[slotProps.data.id].address_correspondance_l2 || "-" }}
+            </span>
           </div>
         </div>
         <div class="flex flex-col gap-2">
@@ -341,6 +359,27 @@ onMounted(() => {
       }
     "
     @cancel="addCompanyDialog = false"
+  />
+
+  <!-- Company edit dialog -->
+  <CompanyEditForm
+    v-model:visible="editCompanyDialog"
+    createOrUpdate="update"
+    :user-company="companyToEdit?.id === currentUserStore.getCompanyId"
+    :companyBrief="companyToEdit"
+    :companyDetails="companyToEditDetails"
+    :loading="getCompaniesMutation.isPending.value || getCompanyDetailsMutation.isPending.value"
+    @success="
+      () => {
+        removeFilters();
+        editCompanyDialog = false;
+        expandedRows = {};
+        expandedCompaniesDetails = {};
+        companyToEditDetails = null;
+        companyToEdit = null;
+      }
+    "
+    @cancel="editCompanyDialog = false"
   />
 
   <!-- Company delete dialog -->
