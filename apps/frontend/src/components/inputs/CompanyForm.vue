@@ -67,7 +67,7 @@ function resetInitialValues() {
 watch(
   [() => props.companyBrief, () => props.companyDetails],
   () => {
-    resetInitialValues();
+    if (props.createOrUpdate === "update") resetInitialValues();
   },
   { immediate: true },
 );
@@ -81,7 +81,10 @@ const resolver = zodResolver(
     nip: z
       .string()
       .min(1, { message: "NIP jest wymagany." })
-      .regex(/^[1-9]((\d[1-9])|([1-9]\d))\d{7}/, { message: "NIP musi mieć dokładnie 10 cyfr." }),
+      .max(10, { message: "NIP może zawierać maksymalnie 10 cyfr." })
+      .refine((val) => /^[1-9]((\d[1-9])|([1-9]\d))\d{7}$/.test(val), {
+        message: "NIP musi być poprawny.",
+      }),
     krs: z.string().refine((val) => val === "" || /^\d{10}$/.test(val), {
       message: "KRS musi mieć dokładnie 10 cyfr lub pozostać pusty",
     }),
@@ -108,9 +111,9 @@ const resolver = zodResolver(
           message: "Wpisz poprawny e-mail lub pozostaw puste pole.",
         },
       ),
-    phoneNumber: z
-      .string()
-      .max(16, { message: "Numer telefonu może zawierać maksymalnie 16 znaków." }),
+    phoneNumber: z.string().max(16, {
+      message: "Numer telefonu może zawierać maksymalnie 16 znaków. (Wpisuj bez spacji)",
+    }),
     additionalInfo: z
       .string()
       .max(2048, { message: "Informacja dodatkowa przekracza maksymalny rozmiar." }),
@@ -139,6 +142,19 @@ const createCompanyMutation = useMutation({
   },
 
   onSuccess: (data, variables) => {
+    if (props.userCompany && props.createOrUpdate === "create") {
+      currentUserStore.setCompanyData(
+        data.company_id,
+        variables.name,
+        variables.nip,
+        selectedCountry.value?.code,
+        variables.address_l1,
+        variables.address_l2,
+        variables.email,
+        variables.phone_number,
+        false,
+      );
+    }
     toast.add({ severity: "success", summary: "Firma dodana pomyślnie!", life: 3000 });
     emit("success");
   },
@@ -223,9 +239,13 @@ watch(
   async (visible) => {
     if (visible) {
       await getCountryCodesMutation.mutateAsync();
-      selectedCountry.value = countries.value.find(
-        (c) => c.code === props.companyBrief?.country_code,
-      );
+      if (props.createOrUpdate === "update") {
+        selectedCountry.value = countries.value.find(
+          (c) => c.code === props.companyBrief?.country_code,
+        );
+      } else {
+        selectedCountry.value = countries.value.find((c) => c.code === "PL");
+      }
     }
   },
 );
@@ -235,6 +255,7 @@ watch(
   <Dialog
     :visible="visible"
     @update:visible="emit('update:visible', $event)"
+    :closable="userCompany && props.createOrUpdate === 'create'"
     modal
     :draggable="false"
     :style="{ width: '40rem' }"
@@ -251,9 +272,9 @@ watch(
       </div>
       <div v-if="props.createOrUpdate === 'create'" class="flex flex-col text-xl font-semibold">
         <span v-if="userCompany">
-          Dodaj firmę użytkownika: {{ currentUserStore.getFullName }}:
+          Dodaj firmę użytkownika: {{ currentUserStore.getFullName }}
         </span>
-        <span v-else> Dodaj nową firmę: </span>
+        <span v-else> Dodaj nową firmę </span>
       </div>
     </template>
     <span v-if="props.createOrUpdate === 'create'" class="flex pb-4"
@@ -328,7 +349,7 @@ watch(
             <Select
               v-model="selectedCountry"
               :options="countries"
-              :disabled="userCompany || getCountryCodesMutation.isPending.value"
+              :disabled="userCompany"
               optionLabel="name"
               placeholder="Kraj"
               fluid
