@@ -60,6 +60,19 @@ export interface CompanyListItem {
   phone_number: string | null;
 }
 
+export interface CompanyUpdate {
+  id: string;
+  name: string;
+  nip: string;
+  country_code: string | null;
+  address_l1: string | null;
+  address_l2: string | null;
+  address_correspondance_l1: string | null;
+  address_correspondance_l2: string | null;
+  email: string | null;
+  phone_number: string | null;
+  additional_info: string | null;
+}
 export interface CompanyDetails {
   id: string;
   krs: string | null;
@@ -73,3 +86,5 @@ export interface GetCompaniesListResponse {
   companies: CompanyListItem[];
   page_info: pageInfo;
 }
+
+export type CreateOrUpdate = "create" | "update";

@@ -8,6 +8,7 @@ import type {
   GetCompaniesListResponse,
   IsoCountries,
   CompanyDetails,
+  CompanyUpdate,
 } from "../types/company";
 import { apiConfig } from "../../config";
 
@@ -17,8 +18,16 @@ export const createCompany = async (
   data: CompanyCreationRequest,
 ): Promise<CompanyCreationResponse> => {
   try {
-    console.log(data);
     const response = await axios.post<CompanyCreationResponse>(baseUrl, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateCompany = async (data: CompanyUpdate): Promise<CompanyUpdate> => {
+  try {
+    const response = await axios.put<CompanyUpdate>(baseUrl, data);
     return response.data;
   } catch (error) {
     throw error;
