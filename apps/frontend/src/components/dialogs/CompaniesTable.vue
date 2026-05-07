@@ -21,8 +21,7 @@ import {
 } from "../../lib/services/companyService";
 import type { CompanyDetails, CompanyListItem } from "../../lib/types/company";
 import DeleteConfirmDialog from "./DeleteConfirmDialog.vue";
-import CompanyInfoForm from "../inputs/CompanyInfoForm.vue";
-import CompanyEditForm from "../inputs/CompanyEditForm.vue";
+import CompanyForm from "../inputs/CompanyForm.vue";
 
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
@@ -281,7 +280,11 @@ onMounted(() => {
             :src="`https://flagcdn.com/${slotProps.data.country_code?.toLowerCase()}.svg`"
             style="width: 24px"
             loading="lazy"
-            @error="() => (slotProps.data._flagError = true)"
+            @error="
+              () => {
+                slotProps.data._flagError = true;
+              }
+            "
           />
           <div class="flex flex-col">
             <span>{{ slotProps.data.address_l1 }}</span>
@@ -347,10 +350,13 @@ onMounted(() => {
       <div v-else><span class="flex pl-18">Ładowanie danych firmy...</span></div>
     </template>
   </DataTable>
-  <!-- Company details dialog -->
-  <CompanyInfoForm
+  <!-- Company create dialog -->
+  <CompanyForm
     v-model:visible="addCompanyDialog"
+    createOrUpdate="create"
     :user-company="false"
+    :companyBrief="null"
+    :companyDetails="null"
     :loading="getCompaniesMutation.isPending.value"
     @success="
       () => {
@@ -362,7 +368,7 @@ onMounted(() => {
   />
 
   <!-- Company edit dialog -->
-  <CompanyEditForm
+  <CompanyForm
     v-model:visible="editCompanyDialog"
     createOrUpdate="update"
     :user-company="companyToEdit?.id === currentUserStore.getCompanyId"
