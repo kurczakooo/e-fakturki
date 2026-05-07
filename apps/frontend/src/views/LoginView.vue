@@ -1,34 +1,55 @@
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 
-import { useCurrentUserStore } from "../stores/currentUserStore";
-import AddCompanyDialog from "../components/dialogs/AddCompanyDialog.vue";
 import AddKsefCredentials from "../components/dialogs/AddKsefCredentials.vue";
 import LoginDialog from "../components/dialogs/LoginDialog.vue";
+import CompanyForm from "../components/inputs/CompanyForm.vue";
 
 const router = useRouter();
-const currentUserStore = useCurrentUserStore();
 
-const isLoggedIn = computed(() => (currentUserStore.getFullName ? true : false));
-const isCompanySelected = computed(() => (currentUserStore.getCompanyId ? true : false));
-const isKsefAuthenticated = computed(() => currentUserStore.isCompanyKsefAuthorized);
+const showLoginForm = ref(true);
+const showCompanyForm = ref(false);
+const showKsefCredsForm = ref(false);
 
-watch(
-  [isLoggedIn, isCompanySelected, isKsefAuthenticated],
-  ([loggedIn, companySelected, ksefAuth]) => {
-    if (loggedIn && companySelected && ksefAuth) {
-      router.push("/sales");
-    }
-  },
-  { immediate: true },
-);
+function onLogin() {
+  showLoginForm.value = false;
+  router.push("/sales");
+}
+
+function onRegister() {
+  showLoginForm.value = false;
+  showCompanyForm.value = true;
+}
+
+function onAddCompany() {
+  showCompanyForm.value = false;
+  showKsefCredsForm.value = true;
+}
+
+function onKsefAuthorize() {
+  showKsefCredsForm.value = false;
+  router.push("/sales");
+}
 </script>
 
 <template>
   <div>
-    <LoginDialog v-if="!isLoggedIn" />
-    <AddCompanyDialog v-if="!isCompanySelected && isLoggedIn" />
-    <AddKsefCredentials v-if="!isKsefAuthenticated && isCompanySelected" />
+    <LoginDialog
+      v-model:visible="showLoginForm"
+      @loginSuccess="onLogin"
+      @registerSuccess="onRegister"
+    />
+    <CompanyForm
+      v-model:visible="showCompanyForm"
+      createOrUpdate="create"
+      :user-company="true"
+      :companyBrief="null"
+      :companyDetails="null"
+      :loading="false"
+      @success="onAddCompany"
+      @cancel="null"
+    />
+    <AddKsefCredentials v-model:visible="showKsefCredsForm" @success="onKsefAuthorize" />
   </div>
 </template>

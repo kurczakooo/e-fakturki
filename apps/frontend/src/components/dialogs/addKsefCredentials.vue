@@ -16,6 +16,8 @@ import { createKsefCredentials } from "../../lib/services/ksefService";
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
 
+const emit = defineEmits(["update:visible", "success"]);
+
 const resolver = zodResolver(
   z.object({
     ksef_password: z.string().min(1, { message: "Hasło jest wymagane." }),
@@ -45,6 +47,7 @@ const createKsefCredsMutation = useMutation({
       life: 3000,
     });
     currentUserStore.setCompanyKsefAuthorizationStatus(true);
+    emit("success");
   },
 
   onError: () => {
@@ -99,7 +102,13 @@ const companyName = computed(() => currentUserStore.getCompanyName);
 </script>
 
 <template>
-  <Dialog :visible="true" modal :closable="false" :draggable="false" :style="{ width: '40rem' }">
+  <Dialog
+    :visible="true"
+    @update:visible="emit('update:visible', $event)"
+    modal
+    :draggable="false"
+    :style="{ width: '40rem' }"
+  >
     <template #header>
       <AppLogo />
     </template>

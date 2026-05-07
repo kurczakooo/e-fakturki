@@ -8,13 +8,14 @@ import { reactive, ref } from "vue";
 import { z } from "zod";
 
 import AppLogo from "../AppLogo.vue";
-import router from "../../router/router";
 import { userLogin, userSignUp, decodeToken } from "../../lib/services/authService";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
 import { getUserCompany } from "../../lib/services/companyService";
 
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
+
+const emit = defineEmits(["update:visible", "registerSuccess", "loginSuccess"]);
 
 const initialValues = reactive({
   firstname: "",
@@ -114,7 +115,7 @@ const loginMutation = useMutation({
 
     await getCompanyMutation.mutateAsync();
 
-    router.push("/sales");
+    emit("loginSuccess");
   },
 
   onError: (error: number) => {
@@ -149,6 +150,7 @@ const registerMutation = useMutation({
       data.creds.email,
       data.token,
     );
+    emit("registerSuccess");
   },
 
   onError: (error: number) => {
@@ -176,7 +178,13 @@ const onFormSubmit = async (loggingIn: boolean, event: FormSubmitEvent) => {
 </script>
 
 <template>
-  <Dialog :visible="visible" modal :closable="false" :draggable="false" :style="{ width: '40rem' }">
+  <Dialog
+    :visible="visible"
+    @update:visible="emit('update:visible', $event)"
+    modal
+    :draggable="false"
+    :style="{ width: '40rem' }"
+  >
     <template #header>
       <div class="flex flex-1 justify-between">
         <AppLogo />
