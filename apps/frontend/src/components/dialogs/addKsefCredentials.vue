@@ -8,7 +8,7 @@ import { computed, ref } from "vue";
 import { z } from "zod";
 
 import AppLogo from "../AppLogo.vue";
-import FileInput from "../inputs/fileInput.vue";
+import FileInput from "../inputs/FileInput.vue";
 import type { KsefCredentials } from "../../lib/types/ksef";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
 import { createKsefCredentials } from "../../lib/services/ksefService";
