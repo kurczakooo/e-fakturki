@@ -53,7 +53,7 @@ class CompanyCreateResponse(BaseModel):
 class CompanyUpdate(BaseModel):
     """Return schema for updating a company record."""
 
-    company_id: str = Field(
+    id: str = Field(
         ..., description="The ID of the updated company record in the database."
     )
     name: str = Field(..., description="The name of the company.")

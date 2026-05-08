@@ -65,12 +65,12 @@ async def delete_company(
         ) from e
 
 
-@router.put("", status_code=201, response_model=CompanyUpdate)
+@router.put("", status_code=201, response_model=str)
 async def update_company(
     payload: CompanyUpdate,
     current_user: UserRead = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_db_session),
-) -> CompanyUpdate:
+) -> str:
     """Update a company record."""
     try:
         company_update_response = await update_company_data(db_session, payload)

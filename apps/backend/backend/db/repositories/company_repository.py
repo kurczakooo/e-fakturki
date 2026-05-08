@@ -1,4 +1,4 @@
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
@@ -68,7 +68,7 @@ async def insert_new_company(
     try:
         company = CompaniesTable(**payload.model_dump())
         db.add(company)
-        await db.flush()
+        await db.commit()
         await db.refresh(company)
 
         return CompanyCreateResponse(user_id=company.owner_id, company_id=company.id)
@@ -83,24 +83,27 @@ async def update_company_data(
 ) -> CompanyUpdate | None:
     """Update a company record in the database."""
     try:
-        company = await db.get(CompaniesTable, payload.company_id)
-        company.name = payload.name
-        company.nip = payload.nip
-        company.krs = payload.krs
-        company.regon = payload.regon
-        company.country_code = payload.country_code
-        company.address_l1 = payload.address_l1
-        company.address_l2 = payload.address_l2
-        company.address_correspondance_l1 = payload.address_correspondance_l1
-        company.address_correspondance_l2 = payload.address_correspondance_l2
-        company.email = payload.email
-        company.phone_number = payload.phone_number
-        company.additional_info = payload.additional_info
+        await db.execute(
+            update(CompaniesTable)
+            .where(CompaniesTable.id == payload.id)
+            .values(
+                name=payload.name,
+                nip=payload.nip,
+                krs=payload.krs,
+                regon=payload.regon,
+                email=payload.email,
+                phone_number=payload.phone_number,
+                country_code=payload.country_code,
+                address_l1=payload.address_l1,
+                address_l2=payload.address_l2,
+                address_correspondance_l1=payload.address_correspondance_l1,
+                address_correspondance_l2=payload.address_correspondance_l2,
+                additional_info=payload.additional_info,
+            )
+        )
 
-        await db.flush()
-        await db.refresh(company)
-
-        return CompanyUpdate(**company)
+        await db.commit()
+        return payload.id
 
     except IntegrityError:
         await db.rollback()
