@@ -9,8 +9,11 @@ def check_and_set_gross_price(payload: ProductCreate) -> ProductCreate:
     """
     Check if the gross price is set, and calculate it.
 
-    :param payload: The data for creating a new product record.
-    :return: Payload object
+    Args:
+        payload: The data for creating a new product record.
+
+    Returns:
+        Payload object.
     """
     if not payload.gross_price or payload.gross_price == 0:
         net_price = Decimal(payload.net_price)
