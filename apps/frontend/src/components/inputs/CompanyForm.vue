@@ -35,6 +35,7 @@ const toast = useToast();
 const currentUserStore = useCurrentUserStore();
 const countries = ref<IsoCountries[]>([]);
 const selectedCountry = ref<IsoCountries>();
+const dialogClosable = !(props.userCompany && props.createOrUpdate === "create");
 
 const initialValues = reactive({
   name: "",
@@ -126,16 +127,16 @@ const createCompanyMutation = useMutation({
       owner_id: props.userCompany ? currentUserStore.getUserId : null,
       name: values.name,
       nip: values.nip,
-      krs: values.krs == "" ? null : values.krs,
-      regon: values.regon == "" ? null : values.regon,
+      krs: values.krs ?? null,
+      regon: values.regon ?? null,
       country_code: selectedCountry.value?.code,
-      address_l1: values.addressL1 == "" ? null : values.addressL1,
-      address_l2: values.addressL2 == "" ? null : values.addressL2,
-      address_correspondance_l1: null,
-      address_correspondance_l2: null,
-      email: values.email == "" ? null : values.email,
-      phone_number: null,
-      additional_info: null,
+      address_l1: values.addressL1 ?? null,
+      address_l2: values.addressL2 ?? null,
+      address_correspondance_l1: values.addressCorrespondanceL1 ?? null,
+      address_correspondance_l2: values.addressCorrespondanceL2 ?? null,
+      email: values.email ?? null,
+      phone_number: values.phoneNumber ?? null,
+      additional_info: values.additionalInfo ?? null,
     });
 
     return companyResp;
@@ -160,7 +161,7 @@ const createCompanyMutation = useMutation({
   },
 
   onError: (error) => {
-    toast.add({ severity: "error", summary: error.response?.data?.detail, life: 3000 });
+    toast.add({ severity: "error", summary: error.response?.data?.detail, life: 5000 });
   },
 });
 
@@ -208,7 +209,7 @@ const updateCompanyMutation = useMutation({
   },
 
   onError: (error) => {
-    toast.add({ severity: "error", summary: error.response?.data?.detail, life: 3000 });
+    toast.add({ severity: "error", summary: error.response?.data?.detail, life: 5000 });
   },
 });
 
@@ -222,7 +223,7 @@ const getCountryCodesMutation = useMutation({
   },
 
   onError: (error) => {
-    toast.add({ severity: "error", summary: error.response?.data?.detail, life: 3000 });
+    toast.add({ severity: "error", summary: error.response?.data?.detail, life: 5000 });
   },
 });
 
@@ -255,7 +256,7 @@ watch(
   <Dialog
     :visible="visible"
     @update:visible="emit('update:visible', $event)"
-    :closable="userCompany && props.createOrUpdate === 'create'"
+    :closable="dialogClosable"
     modal
     :draggable="false"
     :style="{ width: '40rem' }"
@@ -280,7 +281,6 @@ watch(
     <span v-if="props.createOrUpdate === 'create'" class="flex pb-4"
       >Pola opcjonalne i dodatkowe informacje o firmie można zmienić później.</span
     >
-    <!-- <div v-if="companyBrief && companyDetails" class="card flex justify-center pt-2"> -->
     <div class="card flex justify-center pt-2">
       <Form
         :initialValues="initialValues"

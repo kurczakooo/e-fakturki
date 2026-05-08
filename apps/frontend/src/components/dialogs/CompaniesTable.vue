@@ -342,9 +342,11 @@ onMounted(() => {
             </span>
           </div>
         </div>
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-2 max-w-100">
           <span class="font-semibold">Dodatkowe informacje</span>
-          <span>{{ expandedCompaniesDetails[slotProps.data.id]?.additional_info || "-" }}</span>
+          <span class="wrap-break-word">{{
+            expandedCompaniesDetails[slotProps.data.id]?.additional_info || "-"
+          }}</span>
         </div>
       </div>
       <div v-else><span class="flex pl-18">Ładowanie danych firmy...</span></div>
