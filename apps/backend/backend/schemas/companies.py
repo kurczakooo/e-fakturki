@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from backend.web.api.invoices.schemas import PageInfo
+from backend.schemas.invoices import PageInfo
 
 
 class CompanyCreate(BaseModel):

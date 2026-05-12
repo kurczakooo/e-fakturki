@@ -33,7 +33,7 @@ class CredentialsCreateResponse(BaseModel):
     company_id: str = Field(
         ..., description="The ID of the company to which the certificates belong."
     )
-    credentials_id: int = Field(
+    credentials_id: str = Field(
         ...,
         description="The ID of the created KSeF credentials record in the database.",
     )
@@ -71,7 +71,7 @@ class KsefInvoiceDownload(BaseModel):
     """Schema for downloading invoice from KSeF."""
 
     company_id: str
-    invoice_id: int
+    invoice_id: str
 
     data: str
 

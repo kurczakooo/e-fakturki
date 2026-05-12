@@ -1,6 +1,5 @@
-"""Schemas for Auth."""
-
 from pydantic import BaseModel, Field
+from enum import StrEnum
 
 
 class Token(BaseModel):
@@ -8,6 +7,13 @@ class Token(BaseModel):
 
     access_token: str
     token_type: str
+
+
+class TokenType(StrEnum):
+    """Enum for JWT token type."""
+
+    ACCESS = "access"
+    REFRESH = "refresh"
 
 
 class TokenData(BaseModel):
@@ -18,6 +24,7 @@ class TokenData(BaseModel):
     name: str
     last_name: str
     exp: int | None = None
+    token_type: TokenType | None = None
 
 
 class UserCreate(BaseModel):
@@ -30,7 +37,7 @@ class UserCreate(BaseModel):
 
 
 class UserRead(BaseModel):
-    """Schema for reading a product record."""
+    """Schema for reading a user record."""
 
     id: str = Field(..., description="ID of the user")
     name: str = Field(..., description="User name")
