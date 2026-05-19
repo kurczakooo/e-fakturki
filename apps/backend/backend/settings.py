@@ -1,11 +1,11 @@
 import enum
 from pathlib import Path
 from tempfile import gettempdir
+from pydantic import SecretStr
 
 from ksef_client import KsefEnvironment
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from fastapi.security import OAuth2PasswordBearer
 
 TEMP_DIR = Path(gettempdir())
 
@@ -36,17 +36,17 @@ class Settings(BaseSettings):
     # Enable uvicorn reloading
     reload: bool = False
 
+    # Encryption key
+    ENCRYPTION_SECRET_KEY: SecretStr
+
     # Current environment
-    environment: str = "dev"
+    environment: str = "prod"
 
     # auth
-    jwt_secret_key: str
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
-    token_type: str = "bearer"  # noqa: S105
-    oauth2_scheme: OAuth2PasswordBearer = OAuth2PasswordBearer(
-        tokenUrl="/api/auth/login", scheme_name="JWT"
-    )
+    JWT_SECRET_KEY: SecretStr
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
 
     # KSeF environment
     @classmethod
