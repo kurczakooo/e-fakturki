@@ -1,7 +1,8 @@
 from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Integer, Text
+from sqlalchemy import DateTime, ForeignKey, Text, String
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
+from uuid import uuid4
 
 from backend.db.base import Base
 
@@ -11,20 +12,20 @@ class KsefCredentialsTable(Base):
 
     __tablename__ = "ksef_credentials"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    company_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("companies.id"), nullable=False
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid4())
+    )
+    company_id: Mapped[str] = mapped_column(
+        String, ForeignKey("companies.id"), nullable=False
     )
 
-    encrypted_cert_auth: Mapped[str] = mapped_column(Text, nullable=False)
-    encrypted_private_key_auth: Mapped[str] = mapped_column(Text, nullable=False)
-    encrypted_password_auth: Mapped[str] = mapped_column(Text, nullable=False)
-
-    encrypted_cert_offline: Mapped[str] = mapped_column(Text, nullable=True)
-    encrypted_private_key_offline: Mapped[str] = mapped_column(Text, nullable=True)
-    encrypted_password_offline: Mapped[str] = mapped_column(Text, nullable=True)
-
-    encrypted_token: Mapped[str] = mapped_column(Text, nullable=True)
+    cert_auth: Mapped[str] = mapped_column(Text, nullable=False)
+    private_key_auth: Mapped[str] = mapped_column(Text, nullable=False)
+    password_auth: Mapped[str] = mapped_column(Text, nullable=False)
+    cert_offline: Mapped[str] = mapped_column(Text, nullable=True)
+    private_key_offline: Mapped[str] = mapped_column(Text, nullable=True)
+    password_offline: Mapped[str] = mapped_column(Text, nullable=True)
+    token: Mapped[str] = mapped_column(Text, nullable=True)
     token_expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
