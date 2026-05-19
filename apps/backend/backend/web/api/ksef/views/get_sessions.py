@@ -3,6 +3,7 @@ from ksef_client import KsefClient, KsefClientOptions
 from ksef_client.exceptions import KsefRateLimitError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.web.api.ksef.services import decrypt_ksef_certs
 from backend.db.dependencies import get_db_session
 from backend.db.repositories.company_repository import get_company_nip
 from backend.services.ksef.auth.certificate_auth import (
@@ -10,7 +11,7 @@ from backend.services.ksef.auth.certificate_auth import (
     certificate_str_to_temp_file,
     remove_temp_file,
 )
-from backend.web.api.auth.schemas import UserRead
+from backend.schemas.auth import UserRead
 from backend.web.api.auth.services import get_current_user
 from backend.services.ksef.auth.ksef_session import open_ksef_session
 from backend.db.repositories.ksef_credentials_repository import get_auth_certs
@@ -32,7 +33,9 @@ async def get_invoices_list(
 
     # load needed company data for the upload, including NIP and certs
     company_nip = await get_company_nip(db_session, company_id)
-    company_ksef_certs = await get_auth_certs(db_session, company_id)
+    company_ksef_certs = decrypt_ksef_certs(
+        await get_auth_certs(db_session, company_id)
+    )
     password = company_ksef_certs.password
     cert_path = certificate_str_to_temp_file(company_ksef_certs.certificate)
     key_path = certificate_str_to_temp_file(company_ksef_certs.private_key)

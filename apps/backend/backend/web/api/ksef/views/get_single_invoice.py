@@ -15,13 +15,14 @@ from backend.services.ksef.auth.certificate_auth import (
     certificate_str_to_temp_file,
     remove_temp_file,
 )
-from backend.web.api.auth.schemas import UserRead
-from backend.web.api.invoices.schemas import InvoiceResponse
+from backend.schemas.auth import UserRead
+from backend.schemas.invoices import InvoiceResponse
 from backend.web.api.auth.services import get_current_user
 from backend.services.ksef.auth.ksef_session import open_ksef_session
 
 from backend.settings import Settings
 from backend.web.api.ksef.services import (
+    decrypt_ksef_certs,
     parse_and_insert_full_invoice,
     build_invoice_details_response,
 )
@@ -53,7 +54,9 @@ async def download_invoice_from_ksef(
 
     # load needed company data for the upload, including NIP and certs
     company_nip = await get_company_nip(db_session, company_id)
-    company_ksef_certs = await get_auth_certs(db_session, company_id)
+    company_ksef_certs = decrypt_ksef_certs(
+        await get_auth_certs(db_session, company_id)
+    )
     password = company_ksef_certs.password
     cert_path = certificate_str_to_temp_file(company_ksef_certs.certificate)
     key_path = certificate_str_to_temp_file(company_ksef_certs.private_key)

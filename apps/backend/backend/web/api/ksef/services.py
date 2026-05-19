@@ -1,6 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from dateutil import parser
 
+from backend.schemas.ksef import KsefCertificatesLoad
+from backend.services.encryptor import Encryptor
 from backend.db.repositories.invoice_xml_repository import insert_invoice_xml
 from backend.db.repositories.invoices_details_repository import (
     insert_invoice_details,
@@ -19,7 +21,7 @@ from backend.db.repositories.invoices_payment_repository import (
     InvoicePayment,
 )
 from backend.domain.fa3_xml_utils.utils.parser import FA3XmlParser
-from backend.web.api.invoices.schemas import InvoiceResponse, InvoiceCompanyData
+from backend.schemas.invoices import InvoiceResponse, InvoiceCompanyData
 
 
 def to_iso(date_str: str, end_of_day: bool = False) -> str:
@@ -32,6 +34,15 @@ def to_iso(date_str: str, end_of_day: bool = False) -> str:
         dt = dt.replace(hour=0, minute=0, second=0)
 
     return dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def decrypt_ksef_certs(certificates: KsefCertificatesLoad) -> KsefCertificatesLoad:
+    """Decrypts KSeF certificates."""
+    certificates.certificate = Encryptor().decrypt_text(certificates.certificate)
+    certificates.private_key = Encryptor().decrypt_text(certificates.private_key)
+    certificates.password = Encryptor().decrypt_text(certificates.password)
+
+    return certificates
 
 
 async def parse_and_insert_full_invoice(
