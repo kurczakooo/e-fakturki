@@ -62,9 +62,9 @@ class KsefInvoiceUploadStatus(BaseModel):
 class KsefCertificatesLoad(BaseModel):
     """Schema for storing KSeF certificates for a company. Encrypted or decrypted."""
 
-    certificate: str
-    private_key: str
-    password: str
+    certificate: str | bytes
+    private_key: str | bytes
+    password: str | bytes
 
 
 class KsefInvoiceDownload(BaseModel):
