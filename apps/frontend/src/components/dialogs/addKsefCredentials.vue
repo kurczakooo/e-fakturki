@@ -33,7 +33,7 @@ const createKsefCredsMutation = useMutation({
 
     return await createKsefCredentials({
       company_id: companyId,
-      certificates_for_auth: true,
+      online_certificates: true,
       certificate: values.certFile,
       private_key: values.keyFile,
       password: values.certPassword,

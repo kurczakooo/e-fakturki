@@ -37,24 +37,24 @@ const items = ref([
         label: "Produkty",
         icon: "pi pi-box",
         route: "/products",
-        disabled: true,
+        disabled: false,
       },
       {
-        label: "Kontrahenci",
+        label: "Firmy",
         icon: "pi pi-user",
         route: "/companies",
-        disabled: true,
+        disabled: false,
       },
     ],
   },
   {
     label: "Aplikacja",
     items: [
-      //   {
-      //     label: "Tryb",
-      //     icon: "pi pi-sun",
-      //     command: toggleDarkMode,
-      //   },
+      {
+        label: "Tryb",
+        icon: "pi pi-sun",
+        command: toggleDarkMode,
+      },
       {
         label: "Ustawienia",
         icon: "pi pi-cog",

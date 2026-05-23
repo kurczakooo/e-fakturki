@@ -10,39 +10,33 @@ import {
   InputIcon,
   FloatLabel,
   Button,
-  Tag,
 } from "primevue";
 import { useMutation } from "@tanstack/vue-query";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
-import {
-  getCompaniesList,
-  deleteCompany,
-  getCompanyDetails,
-} from "../../lib/services/companyService";
-import type { CompanyDetails, CompanyListItem } from "../../lib/types/company";
 import DeleteConfirmDialog from "./DeleteConfirmDialog.vue";
-import CompanyForm from "../inputs/CompanyForm.vue";
 import ProductForm from "../inputs/ProductForm.vue";
+import type { ProductListItem, TaxRate } from "../../lib/types/products";
+import { deleteProduct, getProductsList, getTaxRates } from "../../lib/services/productService";
 
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
 const searchFilters = ref<string>("");
-const lockedCompany = ref<CompanyListItem[]>([]);
 const expandedRows = ref<{ [key: string]: boolean }>({});
-const expandedCompaniesDetails = ref<Record<string, CompanyDetails>>({});
-const sortedCompanies = ref<CompanyListItem[]>([]);
+const sortedProducts = ref<ProductListItem[]>([]);
+const taxRates = ref<TaxRate[]>([]);
+const taxRateMap = ref<Map<string, TaxRate>>(new Map());
 const pageSize = ref(10);
 const first = ref(0);
 const totalRecords = ref(0);
-const companyToEdit = ref<CompanyListItem | null>(null);
-const companyToEditDetails = ref<CompanyDetails | null>(null);
-const addCompanyDialog = ref(false);
-const editCompanyDialog = ref(false);
-const deleteCompanyDialog = ref(false);
+const productToEdit = ref<ProductListItem | null>(null);
+const addProductDialog = ref(false);
+const editProductDialog = ref(false);
+const deleteProductDialog = ref(false);
 
-const getCompaniesMutation = useMutation({
+const getProductsMutation = useMutation({
   mutationFn: async (values: any) => {
-    const list_data = await getCompaniesList({
+    const list_data = await getProductsList({
+      company_id: currentUserStore.getCompanyId,
       search_string: values.search_string,
       page_size: values.page_size,
       page_offset: values.page_offset,
@@ -51,88 +45,60 @@ const getCompaniesMutation = useMutation({
   },
 
   onSuccess: (data) => {
-    // set the frozen top record as user company
-    resetLockedUserCompanyRecord();
-    // remove user company from the list of the rest of the companies
-    sortedCompanies.value = data.companies.filter(
-      (item: CompanyListItem) => item.id !== currentUserStore.companyId,
-    );
     totalRecords.value = data.page_info.total_items;
-
-    toast.add({ severity: "info", summary: "Pomyślnie pobrano firmy.", life: 3000 });
+    sortedProducts.value = data.products;
+    toast.add({ severity: "info", summary: "Pomyślnie pobrano produkty.", life: 3000 });
   },
 
   onError: (error) => {
     toast.add({
       severity: "error",
-      summary: "Błąd w pobieraniu firm\n" + error?.response?.data?.detail,
+      summary: "Błąd w pobieraniu produktów\n" + error?.response?.data?.detail,
       life: 5000,
     });
   },
 });
 
-const deleteCompanyMutation = useMutation({
-  mutationFn: async (company: CompanyListItem) => {
-    const deletedCompanyResp = await deleteCompany(company.id);
-    return company.id;
+const deleteProductMutation = useMutation({
+  mutationFn: async (product: ProductListItem) => {
+    const deletedProductResp = await deleteProduct(product.id);
+    return product.id;
   },
 
-  onSuccess: (deletedId) => {
-    sortedCompanies.value = sortedCompanies.value.filter(
-      (item: CompanyListItem) => item.id !== deletedId,
-    );
-    deleteCompanyDialog.value = false;
-    toast.add({ severity: "info", summary: "Pomyślnie usunięto firme.", life: 3000 });
+  onSuccess: () => {
+    refreshList();
+    toast.add({ severity: "info", summary: "Pomyślnie usunięto produkt.", life: 3000 });
   },
 
   onError: (error) => {
     toast.add({
       severity: "error",
-      summary: "Błąd w usuwaniu firmy\n" + error?.response?.data?.detail,
+      summary: "Błąd w usuwaniu produktu\n" + error?.response?.data?.detail,
       life: 5000,
     });
   },
 });
 
-const getCompanyDetailsMutation = useMutation({
-  mutationFn: async (company: CompanyListItem) => {
-    const companyDetails = await getCompanyDetails(company.id);
-    return companyDetails;
+const getTaxRatesMutation = useMutation({
+  mutationFn: async () => {
+    return await getTaxRates();
   },
+
   onSuccess: (data) => {
-    expandedCompaniesDetails.value[data.id] = data;
+    taxRates.value = data;
+    taxRateMap.value = new Map(data.map((tax) => [tax.str_repr, tax]));
   },
+
   onError: (error) => {
-    toast.add({
-      severity: "error",
-      summary: "Błąd w pobieraniu danych firmy\n" + error?.response?.data?.detail,
-      life: 5000,
-    });
+    toast.add({ severity: "error", summary: error.response?.data?.detail, life: 5000 });
   },
 });
-
-function resetLockedUserCompanyRecord() {
-  lockedCompany.value = [];
-  lockedCompany.value.push(currentUserStore.getUserCompanyListEntry);
-}
-
-function onRowExpand(event: any) {
-  const company = event.data;
-
-  if (!expandedCompaniesDetails.value[company.id]) {
-    getCompanyDetailsMutation.mutate(company);
-  }
-}
-
-function onRowCollapse(event: any) {
-  delete expandedCompaniesDetails.value[event.data.id];
-}
 
 function onPageChange(event: any) {
   first.value = event.first;
   pageSize.value = event.rows;
 
-  getCompaniesMutation.mutate({
+  getProductsMutation.mutate({
     search_string: searchFilters.value,
     page_size: pageSize.value,
     page_offset: event.first,
@@ -140,65 +106,42 @@ function onPageChange(event: any) {
 }
 
 async function onSeachSubmit() {
-  await getCompaniesMutation.mutate({
+  await getProductsMutation.mutate({
     search_string: searchFilters.value,
     page_size: pageSize.value,
     page_offset: 0,
   });
 }
 
-async function removeFilters() {
+async function refreshList() {
   searchFilters.value = "";
   first.value = 0;
-  await getCompaniesMutation.mutate({
+  addProductDialog.value = false;
+  editProductDialog.value = false;
+  deleteProductDialog.value = false;
+  await getProductsMutation.mutate({
     search_string: searchFilters.value,
     page_size: pageSize.value,
     page_offset: 0,
   });
 }
 
-function addNewCompany() {
-  addCompanyDialog.value = true;
-}
-
-async function editCompany(company: CompanyListItem) {
-  companyToEdit.value = null;
-  companyToEditDetails.value = null;
-  companyToEdit.value = company;
-  if (!expandedCompaniesDetails.value[company.id]) {
-    const details = await getCompanyDetailsMutation.mutateAsync(company);
-    companyToEditDetails.value = details;
-  } else {
-    companyToEditDetails.value = expandedCompaniesDetails.value[company.id];
-  }
-  editCompanyDialog.value = true;
-}
-
-function confirmDeleteCompany(company: CompanyListItem) {
-  companyToEdit.value = null;
-  companyToEditDetails.value = null;
-  companyToEdit.value = company;
-  deleteCompanyDialog.value = true;
-}
-
-// onMounted(() => {
-//   getCompaniesMutation.mutate({
-//     search_string: searchFilters.value,
-//     page_size: pageSize.value,
-//     page_offset: 0,
-//   });
-// });
+onMounted(() => {
+  getTaxRatesMutation.mutate();
+  getProductsMutation.mutate({
+    search_string: searchFilters.value,
+    page_size: pageSize.value,
+    page_offset: 0,
+  });
+});
 </script>
 
 <template>
   <DataTable
-    :value="sortedCompanies"
-    :loading="getCompaniesMutation.isPending.value"
+    :value="sortedProducts"
+    :loading="getProductsMutation.isPending.value"
     dataKey="id"
-    :frozen-value="lockedCompany"
     v-model:expanded-rows="expandedRows"
-    @rowExpand="onRowExpand"
-    @rowCollapse="onRowCollapse"
     paginator
     paginator-position="bottom"
     :rows="pageSize"
@@ -213,9 +156,6 @@ function confirmDeleteCompany(company: CompanyListItem) {
     striped-rows
     :pt="{
       table: { style: 'min-width: 50rem;' },
-      bodyrow: ({ props }) => ({
-        class: [{ 'font-bold': props.frozenRow }],
-      }),
       column: {
         bodycell: ({ state }) => ({
           style: state['d_editing'],
@@ -231,13 +171,17 @@ function confirmDeleteCompany(company: CompanyListItem) {
             icon="pi pi-plus"
             rounded
             v-tooltip.bottom="'Dodaj nowy produkt'"
-            @click="addNewCompany"
+            @click="
+              () => {
+                addProductDialog = true;
+              }
+            "
           ></Button>
           <Button
             icon="pi pi-filter-slash"
             outlined
             v-tooltip.bottom="'Wyczysć filtry'"
-            @click="removeFilters"
+            @click="refreshList"
           ></Button>
           <FloatLabel variant="on">
             <IconField>
@@ -252,7 +196,7 @@ function confirmDeleteCompany(company: CompanyListItem) {
                   'Wyszukaj produkt po nazwie, opisie, GTIN. (Zatwierdź wyszukiwanie enterem)'
                 "
                 @keydown.enter="onSeachSubmit"
-                :disabled="getCompaniesMutation.isPending.value"
+                :disabled="getProductsMutation.isPending.value"
               />
               <label for="on_label">Wyszukaj produkt</label>
             </IconField>
@@ -262,46 +206,44 @@ function confirmDeleteCompany(company: CompanyListItem) {
     </template>
     <template #empty> W bazie danych nie ma zapisanych żadnych produktów. </template>
     <Column expander style="width: 1%"></Column>
-    <Column field="name" header="Nazwa" style="width: 20%">
+    <Column field="name" header="Nazwa" style="width: 10%">
       <template #body="slotProps">
         <span>{{ " " + slotProps.data.name }}</span>
       </template>
     </Column>
-    <Column field="nip" header="Kategoria" style="width: 8%">
+    <Column field="gtin" header="GTIN" style="width: 10%">
       <template #body="slotProps">
-        <span>{{ slotProps.data.nip }}</span>
-      </template>
-    </Column>
-    <Column field="address" header="Gtin" style="width: 15%">
-      <template #body="slotProps">
-        <div class="flex items-center gap-2">
-          <img
-            v-if="!slotProps.data._flagError"
-            :src="`https://flagcdn.com/${slotProps.data.country_code?.toLowerCase()}.svg`"
-            style="width: 24px"
-            loading="lazy"
-            @error="
-              () => {
-                slotProps.data._flagError = true;
-              }
-            "
-          />
-          <div class="flex flex-col">
-            <span>{{ slotProps.data.address_l1 }}</span>
-            <span>{{ slotProps.data.address_l2 }}</span>
-          </div>
-        </div>
-      </template>
-    </Column>
-    <Column field="email" header="E-mail" style="width: 10%">
-      <template #body="slotProps">
-        <span v-if="slotProps.data.email">{{ slotProps.data.email }}</span>
+        <span v-if="slotProps.data.gtin">{{ slotProps.data.gtin }}</span>
         <span v-else>-</span>
       </template>
     </Column>
-    <Column field="phone_number" header="Nr. telefonu" style="width: 10%">
+    <Column field="unit" header="Jednostka miary" style="width: 10%">
       <template #body="slotProps">
-        <span v-if="slotProps.data.phone_number">{{ slotProps.data.phone_number }}</span>
+        <span v-if="slotProps.data.unit">{{ slotProps.data.unit }}</span>
+        <span v-else>-</span>
+      </template>
+    </Column>
+    <Column field="net_price" header="Cena netto" style="width: 10%">
+      <template #body="slotProps">
+        <span v-if="slotProps.data.net_price">{{ slotProps.data.net_price }} zł</span>
+        <span v-else>-</span>
+      </template>
+    </Column>
+    <Column field="tax_rate" header="Stawka podatku" style="width: 10%">
+      <template #body="slotProps">
+        <span
+          v-if="slotProps.data.tax_rate"
+          v-tooltip.right="taxRateMap.get(slotProps.data.tax_rate)?.hint_text"
+          >{{
+            taxRateMap.get(slotProps.data.tax_rate)?.display_text || slotProps.data.tax_rate
+          }}</span
+        >
+        <span v-else>-</span>
+      </template>
+    </Column>
+    <Column field="gross_price" header="Cena brutto" style="width: 10%">
+      <template #body="slotProps">
+        <span v-if="slotProps.data.gross_price">{{ slotProps.data.gross_price }} zł</span>
         <span v-else>-</span>
       </template>
     </Column>
@@ -311,88 +253,75 @@ function confirmDeleteCompany(company: CompanyListItem) {
           icon="pi pi-pencil"
           variant="outlined"
           class="mr-2"
-          @click="editCompany(slotProps.data)"
+          @click="
+            () => {
+              productToEdit = null;
+              productToEdit = slotProps.data;
+              editProductDialog = true;
+            }
+          "
         />
         <Button
           icon="pi pi-trash"
           variant="outlined"
           severity="danger"
-          @click="confirmDeleteCompany(slotProps.data)"
-          :disabled="slotProps.data.id === currentUserStore.getCompanyId"
+          @click="
+            () => {
+              productToEdit = null;
+              productToEdit = slotProps.data;
+              deleteProductDialog = true;
+            }
+          "
         /> </template
     ></Column>
     <template #expansion="slotProps">
-      <div v-if="expandedCompaniesDetails[slotProps.data.id]" class="flex flex-row gap-40">
+      <div class="flex flex-row gap-40">
         <div class="flex flex-col gap-2 pl-18">
-          <span class="font-semibold">KRS</span>
-          <span>{{ expandedCompaniesDetails[slotProps.data.id]?.krs || "-" }}</span>
-        </div>
-        <div class="flex flex-col gap-2">
-          <span class="font-semibold">REGON</span>
-          <span>{{ expandedCompaniesDetails[slotProps.data.id]?.regon || "-" }}</span>
-        </div>
-        <div class="flex flex-col gap-2">
-          <span class="font-semibold">Adres korespondencyjny</span>
-          <div class="flex flex-col">
-            <span>
-              {{ expandedCompaniesDetails[slotProps.data.id].address_correspondance_l1 || "-" }}
-            </span>
-            <span>
-              {{ expandedCompaniesDetails[slotProps.data.id].address_correspondance_l2 || "-" }}
-            </span>
-          </div>
-        </div>
-        <div class="flex flex-col gap-2">
-          <span class="font-semibold">Dodatkowe informacje</span>
-          <span>{{ expandedCompaniesDetails[slotProps.data.id]?.additional_info || "-" }}</span>
+          <span class="font-semibold">Opis produktu</span>
+          <span>{{ slotProps.data.description || "-" }}</span>
         </div>
       </div>
-      <div v-else><span class="flex pl-18">Ładowanie danych firmy...</span></div>
     </template>
   </DataTable>
-  <!-- Company create dialog -->
+  <!-- Product create dialog -->
   <ProductForm
-    v-model:visible="addCompanyDialog"
+    v-model:visible="addProductDialog"
     createOrUpdate="create"
     :productInfo="null"
-    :loading="getCompaniesMutation.isPending.value"
+    :taxRates="taxRates"
+    :loading="getProductsMutation.isPending.value"
     @success="
       () => {
-        removeFilters();
-        addCompanyDialog = false;
+        refreshList();
+        addProductDialog = false;
       }
     "
-    @cancel="addCompanyDialog = false"
+    @cancel="addProductDialog = false"
   />
 
-  <!-- Company edit dialog -->
-  <CompanyForm
-    v-model:visible="editCompanyDialog"
+  <!-- Product edit dialog -->
+  <ProductForm
+    v-model:visible="editProductDialog"
     createOrUpdate="update"
-    :user-company="companyToEdit?.id === currentUserStore.getCompanyId"
-    :companyBrief="companyToEdit"
-    :companyDetails="companyToEditDetails"
-    :loading="getCompaniesMutation.isPending.value || getCompanyDetailsMutation.isPending.value"
+    :productInfo="productToEdit"
+    :taxRates="taxRates"
+    :loading="getProductsMutation.isPending.value"
     @success="
       () => {
-        removeFilters();
-        editCompanyDialog = false;
-        expandedRows = {};
-        expandedCompaniesDetails = {};
-        companyToEditDetails = null;
-        companyToEdit = null;
+        refreshList();
+        editProductDialog = false;
       }
     "
-    @cancel="editCompanyDialog = false"
+    @cancel="editProductDialog = false"
   />
 
-  <!-- Company delete dialog -->
+  <!-- Product delete dialog -->
   <DeleteConfirmDialog
-    v-model:visible="deleteCompanyDialog"
-    :deletionObjectName="companyToEdit?.name"
-    deleteObjectString="firmę"
-    :loading="deleteCompanyMutation.isPending.value"
-    @confirm="deleteCompanyMutation.mutate(companyToEdit)"
-    @cancel="deleteCompanyDialog = false"
+    v-model:visible="deleteProductDialog"
+    :deletionObjectName="productToEdit?.name"
+    deleteObjectString="produkt"
+    :loading="deleteProductMutation.isPending.value"
+    @confirm="deleteProductMutation.mutate(productToEdit)"
+    @cancel="deleteProductDialog = false"
   />
 </template>

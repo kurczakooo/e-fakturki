@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import type { UserCompanyResponse } from "../lib/types/company";
 
 export const useCurrentUserStore = defineStore("currentUser", {
   state: () => {
@@ -9,15 +10,7 @@ export const useCurrentUserStore = defineStore("currentUser", {
       email: null as string | null,
       token: null as string | null,
 
-      companyId: null as string | null,
-      companyName: null as string | null,
-      companyNip: null as string | null,
-      companyCountryCode: null as string | null,
-      companyAddressL1: null as string | null,
-      companyAddressL2: null as string | null,
-      companyEmail: null as string | null,
-      companyPhoneNumber: null as string | null,
-      companyKsefAuthorized: false as boolean | null,
+      selectedCompany: null as UserCompanyResponse | null,
     };
   },
   getters: {
@@ -32,30 +25,40 @@ export const useCurrentUserStore = defineStore("currentUser", {
     },
     getToken: (state) => state.token,
     getEmail: (state) => state.email,
-    getCompanyId: (state) => state.companyId,
-    getCompanyName: (state) => state.companyName,
-    getCompanyNip: (state) => state.companyNip,
-    getCompanyCountryCode: (state) => state.companyCountryCode,
-    getCompanyAddressL1: (state) => state.companyAddressL1,
-    getCompanyAddressL2: (state) => state.companyAddressL2,
-    getCompanyEmail: (state) => state.companyEmail,
-    getCompanyPhoneNumber: (state) => state.companyPhoneNumber,
+    getCompanyId: (state) => state.selectedCompany?.id,
+    getCompanyName: (state) => state.selectedCompany?.name,
+    getCompanyNip: (state) => state.selectedCompany?.nip,
+    getCompanyKrs: (state) => state.selectedCompany?.krs,
+    getCompanyRegon: (state) => state.selectedCompany?.regon,
+    getCompanyCountryCode: (state) => state.selectedCompany?.country_code,
+    getCompanyAddressL1: (state) => state.selectedCompany?.address_l1,
+    getCompanyAddressL2: (state) => state.selectedCompany?.address_l2,
+    getCompanyAddressCorrespondanceL1: (state) => state.selectedCompany?.address_correspondance_l1,
+    getCompanyAddressCorrespondanceL2: (state) => state.selectedCompany?.address_correspondance_l2,
+    getCompanyEmail: (state) => state.selectedCompany?.email,
+    getCompanyPhoneNumber: (state) => state.selectedCompany?.phone_number,
+    getCompanyAdditionalInfo: (state) => state.selectedCompany?.additional_info,
 
-    getUserCompanyListEntry: (state) => {
+    getUserCompanyReadUpdate: (state) => {
       return {
-        id: state.companyId,
-        owner_id: state.userId,
-        name: state.companyName,
-        nip: state.companyNip,
-        country_code: state.companyCountryCode,
-        address_l1: state.companyAddressL1,
-        address_l2: state.companyAddressL2,
-        email: state.companyEmail,
-        phone_number: state.companyPhoneNumber,
+        id: state.selectedCompany?.id,
+        owner_id: state.selectedCompany?.owner_id,
+        name: state.selectedCompany?.name,
+        nip: state.selectedCompany?.nip,
+        krs: state.selectedCompany?.krs,
+        regon: state.selectedCompany?.regon,
+        country_code: state.selectedCompany?.country_code,
+        address_l1: state.selectedCompany?.address_l1,
+        address_l2: state.selectedCompany?.address_l2,
+        address_correspondance_l1: state.selectedCompany?.address_correspondance_l1,
+        address_correspondance_l2: state.selectedCompany?.address_correspondance_l2,
+        email: state.selectedCompany?.email,
+        phone_number: state.selectedCompany?.phone_number,
+        additional_info: state.selectedCompany?.additional_info,
       };
     },
 
-    isCompanyKsefAuthorized: (state) => state.companyKsefAuthorized,
+    isCompanyKsefAuthorized: (state) => state.selectedCompany?.ksef_authorized,
   },
   actions: {
     setToken(token: string) {
@@ -68,32 +71,11 @@ export const useCurrentUserStore = defineStore("currentUser", {
       this.email = email;
       this.token = token;
     },
-    setCompanyData(
-      companyId: string,
-      companyName: string,
-      companyNip: string,
-      companyCountryCode: string,
-      companyAddressL1: string,
-      companyAddressL2: string,
-      companyEmail: string,
-      companyPhoneNumber: string,
-      companyKsefAuthorized: boolean,
-    ) {
-      this.companyId = companyId;
-      this.companyName = companyName;
-      this.companyNip = companyNip;
-      this.companyCountryCode = companyCountryCode;
-      this.companyAddressL1 = companyAddressL1;
-      this.companyAddressL2 = companyAddressL2;
-      this.companyEmail = companyEmail;
-      this.companyPhoneNumber = companyPhoneNumber;
-      this.companyKsefAuthorized = companyKsefAuthorized;
+    setCompanyData(company_data: UserCompanyResponse) {
+      this.selectedCompany = company_data;
     },
     setCompanyKsefAuthorizationStatus(status: boolean) {
-      this.companyKsefAuthorized = status;
-    },
-    toString() {
-      return `CurrentUserStore: { userId: ${this.userId}, name: ${this.name}, lastname: ${this.lastname}, email: ${this.email}, token: ${this.token}, companyId: ${this.companyId}, companyName: ${this.companyName}, companyKsefAuthorized: ${this.companyKsefAuthorized} }`;
+      this.selectedCompany.ksef_authorized = status;
     },
   },
 });

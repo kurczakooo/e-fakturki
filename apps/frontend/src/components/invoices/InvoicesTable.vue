@@ -42,10 +42,10 @@ const pageSize = ref(10);
 const first = ref(0);
 const totalRecords = ref(0);
 
-function addDays(date: Date, days: number): Date {
+function addDays(date: Date, days: number): string {
   const newDate = new Date(date);
   newDate.setDate(newDate.getDate() + days);
-  return newDate;
+  return formatLocalDate(newDate);
 }
 
 const getInvoicesMutation = useMutation({
@@ -383,6 +383,6 @@ onMounted(() => {
   <InvoiceDetails
     v-model:visible="dialogVisible"
     :invoice="selectedInvoiceData"
-    :table_type="props.table_type"
+    :invoice_type="props.table_type"
   />
 </template>

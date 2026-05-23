@@ -14,27 +14,21 @@ import {
 } from "primevue";
 import { useMutation } from "@tanstack/vue-query";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
-import {
-  getCompaniesList,
-  deleteCompany,
-  getCompanyDetails,
-} from "../../lib/services/companyService";
-import type { CompanyDetails, CompanyListItem } from "../../lib/types/company";
+import { getCompaniesList, deleteCompany } from "../../lib/services/companyService";
+import type { CompanyReadUpdate } from "../../lib/types/company";
 import DeleteConfirmDialog from "./DeleteConfirmDialog.vue";
 import CompanyForm from "../inputs/CompanyForm.vue";
 
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
 const searchFilters = ref<string>("");
-const lockedCompany = ref<CompanyListItem[]>([]);
+const lockedCompany = ref<CompanyReadUpdate[]>([]);
 const expandedRows = ref<{ [key: string]: boolean }>({});
-const expandedCompaniesDetails = ref<Record<string, CompanyDetails>>({});
-const sortedCompanies = ref<CompanyListItem[]>([]);
+const sortedCompanies = ref<CompanyReadUpdate[]>([]);
 const pageSize = ref(10);
 const first = ref(0);
 const totalRecords = ref(0);
-const companyToEdit = ref<CompanyListItem | null>(null);
-const companyToEditDetails = ref<CompanyDetails | null>(null);
+const companyToEdit = ref<CompanyReadUpdate | null>(null);
 const addCompanyDialog = ref(false);
 const editCompanyDialog = ref(false);
 const deleteCompanyDialog = ref(false);
@@ -54,7 +48,7 @@ const getCompaniesMutation = useMutation({
     resetLockedUserCompanyRecord();
     // remove user company from the list of the rest of the companies
     sortedCompanies.value = data.companies.filter(
-      (item: CompanyListItem) => item.id !== currentUserStore.companyId,
+      (item: CompanyReadUpdate) => item.id !== currentUserStore.getCompanyId,
     );
     totalRecords.value = data.page_info.total_items;
 
@@ -71,14 +65,14 @@ const getCompaniesMutation = useMutation({
 });
 
 const deleteCompanyMutation = useMutation({
-  mutationFn: async (company: CompanyListItem) => {
+  mutationFn: async (company: CompanyReadUpdate) => {
     const deletedCompanyResp = await deleteCompany(company.id);
     return company.id;
   },
 
   onSuccess: (deletedId) => {
     sortedCompanies.value = sortedCompanies.value.filter(
-      (item: CompanyListItem) => item.id !== deletedId,
+      (item: CompanyReadUpdate) => item.id !== deletedId,
     );
     deleteCompanyDialog.value = false;
     toast.add({ severity: "info", summary: "Pomyślnie usunięto firme.", life: 3000 });
@@ -93,38 +87,9 @@ const deleteCompanyMutation = useMutation({
   },
 });
 
-const getCompanyDetailsMutation = useMutation({
-  mutationFn: async (company: CompanyListItem) => {
-    const companyDetails = await getCompanyDetails(company.id);
-    return companyDetails;
-  },
-  onSuccess: (data) => {
-    expandedCompaniesDetails.value[data.id] = data;
-  },
-  onError: (error) => {
-    toast.add({
-      severity: "error",
-      summary: "Błąd w pobieraniu danych firmy\n" + error?.response?.data?.detail,
-      life: 5000,
-    });
-  },
-});
-
 function resetLockedUserCompanyRecord() {
   lockedCompany.value = [];
-  lockedCompany.value.push(currentUserStore.getUserCompanyListEntry);
-}
-
-function onRowExpand(event: any) {
-  const company = event.data;
-
-  if (!expandedCompaniesDetails.value[company.id]) {
-    getCompanyDetailsMutation.mutate(company);
-  }
-}
-
-function onRowCollapse(event: any) {
-  delete expandedCompaniesDetails.value[event.data.id];
+  lockedCompany.value.push(currentUserStore.getUserCompanyReadUpdate);
 }
 
 function onPageChange(event: any) {
@@ -160,22 +125,14 @@ function addNewCompany() {
   addCompanyDialog.value = true;
 }
 
-async function editCompany(company: CompanyListItem) {
+async function editCompany(company: CompanyReadUpdate) {
   companyToEdit.value = null;
-  companyToEditDetails.value = null;
   companyToEdit.value = company;
-  if (!expandedCompaniesDetails.value[company.id]) {
-    const details = await getCompanyDetailsMutation.mutateAsync(company);
-    companyToEditDetails.value = details;
-  } else {
-    companyToEditDetails.value = expandedCompaniesDetails.value[company.id];
-  }
   editCompanyDialog.value = true;
 }
 
-function confirmDeleteCompany(company: CompanyListItem) {
+function confirmDeleteCompany(company: CompanyReadUpdate) {
   companyToEdit.value = null;
-  companyToEditDetails.value = null;
   companyToEdit.value = company;
   deleteCompanyDialog.value = true;
 }
@@ -196,8 +153,6 @@ onMounted(() => {
     dataKey="id"
     :frozen-value="lockedCompany"
     v-model:expanded-rows="expandedRows"
-    @rowExpand="onRowExpand"
-    @rowCollapse="onRowCollapse"
     paginator
     paginator-position="bottom"
     :rows="pageSize"
@@ -322,34 +277,31 @@ onMounted(() => {
         /> </template
     ></Column>
     <template #expansion="slotProps">
-      <div v-if="expandedCompaniesDetails[slotProps.data.id]" class="flex flex-row gap-40">
+      <div class="flex flex-row gap-40">
         <div class="flex flex-col gap-2 pl-18">
           <span class="font-semibold">KRS</span>
-          <span>{{ expandedCompaniesDetails[slotProps.data.id]?.krs || "-" }}</span>
+          <span>{{ slotProps.data.krs || "-" }}</span>
         </div>
         <div class="flex flex-col gap-2">
           <span class="font-semibold">REGON</span>
-          <span>{{ expandedCompaniesDetails[slotProps.data.id]?.regon || "-" }}</span>
+          <span>{{ slotProps.data.regon || "-" }}</span>
         </div>
         <div class="flex flex-col gap-2">
           <span class="font-semibold">Adres korespondencyjny</span>
           <div class="flex flex-col">
             <span>
-              {{ expandedCompaniesDetails[slotProps.data.id].address_correspondance_l1 || "-" }}
+              {{ slotProps.data.address_correspondance_l1 || "-" }}
             </span>
             <span>
-              {{ expandedCompaniesDetails[slotProps.data.id].address_correspondance_l2 || "-" }}
+              {{ slotProps.data.address_correspondance_l2 || "-" }}
             </span>
           </div>
         </div>
-        <div class="flex flex-col gap-2 max-w-100">
+        <div class="flex flex-col gap-2 max-w-200">
           <span class="font-semibold">Dodatkowe informacje</span>
-          <span class="wrap-break-word">{{
-            expandedCompaniesDetails[slotProps.data.id]?.additional_info || "-"
-          }}</span>
+          <span class="wrap-break-word">{{ slotProps.data.additional_info || "-" }}</span>
         </div>
       </div>
-      <div v-else><span class="flex pl-18">Ładowanie danych firmy...</span></div>
     </template>
   </DataTable>
   <!-- Company create dialog -->
@@ -357,8 +309,7 @@ onMounted(() => {
     v-model:visible="addCompanyDialog"
     createOrUpdate="create"
     :user-company="false"
-    :companyBrief="null"
-    :companyDetails="null"
+    :companyInfo="null"
     :loading="getCompaniesMutation.isPending.value"
     @success="
       () => {
@@ -374,16 +325,13 @@ onMounted(() => {
     v-model:visible="editCompanyDialog"
     createOrUpdate="update"
     :user-company="companyToEdit?.id === currentUserStore.getCompanyId"
-    :companyBrief="companyToEdit"
-    :companyDetails="companyToEditDetails"
-    :loading="getCompaniesMutation.isPending.value || getCompanyDetailsMutation.isPending.value"
+    :companyInfo="companyToEdit"
+    :loading="getCompaniesMutation.isPending.value"
     @success="
       () => {
         removeFilters();
         editCompanyDialog = false;
         expandedRows = {};
-        expandedCompaniesDetails = {};
-        companyToEditDetails = null;
         companyToEdit = null;
       }
     "

@@ -1,4 +1,4 @@
-// type for holding KSeF credentials
+import type { PageInfo } from "./common";
 export interface KsefCredentials {
   certFile: File | null;
   keyFile: File | null;
@@ -7,7 +7,7 @@ export interface KsefCredentials {
 
 export interface KsefCredentialsCreationRequest {
   company_id: string;
-  certificates_for_auth: boolean;
+  online_certificates: boolean;
   certificate: File;
   private_key: File;
   password: string;
@@ -43,17 +43,9 @@ export interface invoiceListItem {
   ksef_status: string;
 }
 
-export interface pageInfo {
-  current_page: number;
-  page_size: number;
-  total_items: number;
-  has_next_page: boolean;
-  has_previous_page: boolean;
-}
-
 export interface getInvoicesListResponse {
   invoices: invoiceListItem[];
-  page_info: pageInfo;
+  page_info: PageInfo;
 }
 
 export interface postInvoiceToKsefResponse {

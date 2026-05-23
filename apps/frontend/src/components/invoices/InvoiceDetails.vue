@@ -16,7 +16,7 @@ import { emptyToNull } from "../../lib/utils";
 import { ref, watch } from "vue";
 import { useMutation } from "@tanstack/vue-query";
 import { getInvoiceDetails, postInvoiceToKsef } from "../../lib/services/ksefService";
-import type { InvoiceCompanyData, InvoiceResponse } from "../../lib/types/invoices";
+import type { InvoiceCompanyData, InvoiceObject } from "../../lib/types/invoices";
 import {
   ksefStatusHint,
   ksefStatusSeverity,
@@ -30,7 +30,7 @@ import { createCompany } from "../../lib/services/companyService";
 
 const props = defineProps<{
   visible: boolean;
-  table_type: invoiceTableType;
+  invoice_type: invoiceTableType;
   invoice: any;
 }>();
 
@@ -41,7 +41,7 @@ const toggleKsefPopup = (event: any) => {
   ksefPopup.value.toggle(event);
 };
 const emit = defineEmits(["update:visible"]);
-const invoice = ref<InvoiceResponse>();
+const invoice = ref<InvoiceObject>();
 const postInvoiceToKsefError = ref<string>("");
 
 const getInvoiceDetailsMutation = useMutation({
@@ -88,7 +88,7 @@ const postInvoiceToKsefMutation = useMutation({
 const saveCompanyMutation = useMutation({
   mutationFn: async () => {
     const company =
-      props.table_type === "sales" ? invoice.value?.buyer_info : invoice.value?.seller_info;
+      props.invoice_type === "sales" ? invoice.value?.buyer_info : invoice.value?.seller_info;
 
     const companyResp = await createCompany({
       owner_id: null,
@@ -238,7 +238,7 @@ watch(
         </Card>
         <div
           class="flex flex-1 items-start"
-          :class="props.table_type === 'sales' ? 'justify-end pr-2' : 'justify-start pl-2'"
+          :class="props.invoice_type === 'sales' ? 'justify-end pr-2' : 'justify-start pl-2'"
         >
           <Button
             icon="pi pi-save"

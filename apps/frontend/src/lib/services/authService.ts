@@ -3,21 +3,90 @@ import { jwtDecode } from "jwt-decode";
 import { apiConfig } from "../../config";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
 import type { LoginRequest, SignUpRequest, LoginResponse } from "../types/auth";
+import router from "../../router/router";
 
 const baseUrl = apiConfig.apiBaseUrl + apiConfig.endpoints.auth;
 
 // Axios interceptor to add the JWT token to all requests
-axios.interceptors.request.use(
-  (axiosConfig) => {
+axios.interceptors.request.use((config) => {
+  const currentUserStore = useCurrentUserStore();
+  const token = currentUserStore.getToken;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// Axios interceptor to handle 401 responses
+// axios.interceptors.response.use(
+//   (response) => response,
+//   (error) => {
+//     if (error.response?.status === 401) {
+//       userLogout();
+//       router.push("/login");
+//     }
+
+//     return Promise.reject(error);
+//   },
+// );
+
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+axios.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
     const currentUserStore = useCurrentUserStore();
-    const token = currentUserStore.getToken;
-    if (!token) return axiosConfig;
 
-    axiosConfig.headers["Authorization"] = "Bearer " + token;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // 🔥 kolejkuj requesty
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return axios(originalRequest);
+        });
+      }
 
-    return axiosConfig;
-  },
-  (error) => {
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const response = await axios.post(baseUrl + "/auth/refresh", {}, { withCredentials: true });
+
+        const newToken = response.data.access_token;
+
+        currentUserStore.setToken(newToken);
+
+        processQueue(null, newToken);
+
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return axios(originalRequest);
+      } catch (err) {
+        processQueue(err, null);
+        userLogout();
+        router.push("/login");
+        return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
     return Promise.reject(error);
   },
 );
@@ -45,6 +114,7 @@ export const userLogin = async (data: LoginRequest): Promise<LoginResponse> => {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
+      withCredentials: true,
     });
     return response.data;
   } catch (error: any) {

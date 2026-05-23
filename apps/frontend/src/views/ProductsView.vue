@@ -1,3 +1,7 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import ProductsTable from "../components/dialogs/ProductsTable.vue";
+</script>
 
-<template>{{ "Products" }}</template>
+<template>
+  <ProductsTable />
+</template>

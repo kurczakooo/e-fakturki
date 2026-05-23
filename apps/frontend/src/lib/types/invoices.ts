@@ -58,7 +58,7 @@ export interface InvoiceEntry {
   net_price: number;
   gross_price: number | null;
   net_total: number;
-  tax_rate: number;
+  tax_rate: string;
   tax_total: number | null;
   gross_total: number;
 }
@@ -82,8 +82,8 @@ export interface InvoicePayment {
   seller_bank_name: string | null;
 }
 
-export interface InvoiceResponse {
-  id: string;
+export interface InvoiceObject {
+  id: string | null;
   invoice_number: string;
   invoice_type: string;
   ksef_number: string | null;

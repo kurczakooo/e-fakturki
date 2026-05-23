@@ -7,27 +7,26 @@ import { useCurrentUserStore } from "../../stores/currentUserStore";
 import { reactive, ref, watch } from "vue";
 import { zodResolver } from "@primevue/forms/resolvers/zod";
 import { useMutation } from "@tanstack/vue-query";
-import { updateCompany, getIsoCountries, createCompany } from "../../lib/services/companyService";
+import {
+  updateCompany,
+  getIsoCountries,
+  createCompany,
+  getUserCompany,
+} from "../../lib/services/companyService";
 import z from "zod";
-import type {
-  CompanyDetails,
-  CompanyListItem,
-  CreateOrUpdate,
-  IsoCountries,
-} from "../../lib/types/company";
+import type { CompanyReadUpdate, CreateOrUpdate, IsoCountries } from "../../lib/types/company";
+import { emptyToNull } from "../../lib/utils";
 
 const props = withDefaults(
   defineProps<{
     visible: boolean;
     createOrUpdate: CreateOrUpdate;
     userCompany: boolean;
-    companyBrief: CompanyListItem | null;
-    companyDetails: CompanyDetails | null;
+    companyInfo: CompanyReadUpdate | null;
     loading?: boolean;
   }>(),
   {
-    companyBrief: null,
-    companyDetails: null,
+    companyInfo: null,
   },
 );
 const emit = defineEmits(["update:visible", "success", "cancel"]);
@@ -52,21 +51,21 @@ const initialValues = reactive({
 });
 
 function resetInitialValues() {
-  initialValues.name = props.companyBrief?.name ?? "";
-  initialValues.nip = props.companyBrief?.nip ?? "";
-  initialValues.krs = props.companyDetails?.krs ?? "";
-  initialValues.regon = props.companyDetails?.regon ?? "";
-  initialValues.addressL1 = props.companyBrief?.address_l1 ?? "";
-  initialValues.addressL2 = props.companyBrief?.address_l2 ?? "";
-  initialValues.addressCorrespondanceL1 = props.companyDetails?.address_correspondance_l1 ?? "";
-  initialValues.addressCorrespondanceL2 = props.companyDetails?.address_correspondance_l2 ?? "";
-  initialValues.email = props.companyBrief?.email ?? "";
-  initialValues.phoneNumber = props.companyBrief?.phone_number ?? "";
-  initialValues.additionalInfo = props.companyDetails?.additional_info ?? "";
+  initialValues.name = props.companyInfo?.name ?? "";
+  initialValues.nip = props.companyInfo?.nip ?? "";
+  initialValues.krs = props.companyInfo?.krs ?? "";
+  initialValues.regon = props.companyInfo?.regon ?? "";
+  initialValues.addressL1 = props.companyInfo?.address_l1 ?? "";
+  initialValues.addressL2 = props.companyInfo?.address_l2 ?? "";
+  initialValues.addressCorrespondanceL1 = props.companyInfo?.address_correspondance_l1 ?? "";
+  initialValues.addressCorrespondanceL2 = props.companyInfo?.address_correspondance_l2 ?? "";
+  initialValues.email = props.companyInfo?.email ?? "";
+  initialValues.phoneNumber = props.companyInfo?.phone_number ?? "";
+  initialValues.additionalInfo = props.companyInfo?.additional_info ?? "";
 }
 
 watch(
-  [() => props.companyBrief, () => props.companyDetails],
+  () => props.companyInfo,
   () => {
     if (props.createOrUpdate === "update") resetInitialValues();
   },
@@ -74,51 +73,73 @@ watch(
 );
 
 const resolver = zodResolver(
-  z.object({
-    name: z
-      .string()
-      .min(1, { message: "Nazwa firmy jest wymagana." })
-      .min(3, { message: "Nazwa musi mieć min. 3 znaki." }),
-    nip: z
-      .string()
-      .min(1, { message: "NIP jest wymagany." })
-      .max(10, { message: "NIP może zawierać maksymalnie 10 cyfr." })
-      .refine((val) => /^[1-9]((\d[1-9])|([1-9]\d))\d{7}$/.test(val), {
-        message: "NIP musi być poprawny.",
-      }),
-    krs: z.string().refine((val) => val === "" || /^\d{10}$/.test(val), {
-      message: "KRS musi mieć dokładnie 10 cyfr lub pozostać pusty",
-    }),
-    regon: z.string().refine((val) => val === "" || /^(\d{14})$/.test(val), {
-      message: "REGON musi mieć 14 cyfr lub pozostać pusty",
-    }),
-    addressL1: z.string().max(512, { message: "Adres przekracza maksymalny rozmiar." }),
-    addressL2: z.string().max(512, { message: "Adres przekracza maksymalny rozmiar." }),
-    addressCorrespondanceL1: z
-      .string()
-      .max(512, { message: "Adres przekracza maksymalny rozmiar." }),
-    addressCorrespondanceL2: z
-      .string()
-      .max(512, { message: "Adres przekracza maksymalny rozmiar." }),
-    email: z
-      .string()
-      .refine(
-        (val) =>
-          val === "" ||
-          /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/.test(
-            val,
-          ),
-        {
-          message: "Wpisz poprawny e-mail lub pozostaw puste pole.",
-        },
-      ),
-    phoneNumber: z.string().max(16, {
-      message: "Numer telefonu może zawierać maksymalnie 16 znaków. (Wpisuj bez spacji)",
-    }),
-    additionalInfo: z
-      .string()
-      .max(2048, { message: "Informacja dodatkowa przekracza maksymalny rozmiar." }),
-  }),
+  z
+    .object({
+      name: z
+        .string()
+        .min(1, { message: "Nazwa firmy jest wymagana." })
+        .min(3, { message: "Nazwa musi mieć min. 3 znaki." })
+        .max(256, { message: "Nazwa firmy może mieć maksymalnie 256 znaków." }),
+
+      nip: z
+        .string()
+        .min(1, { message: "NIP jest wymagany." })
+        .max(10, { message: "NIP może zawierać maksymalnie 10 cyfr." })
+        .refine((val) => /^[1-9]((\d[1-9])|([1-9]\d))\d{7}$/.test(val), {
+          message: "NIP musi być poprawny.",
+        }),
+      krs: z
+        .string()
+        .refine((val) => val === "" || /^\d{10}$/.test(val), {
+          message: "KRS musi mieć dokładnie 10 cyfr lub pozostać pusty",
+        })
+        .optional(),
+      regon: z
+        .string()
+        .refine((val) => val === "" || /^(\d{14})$/.test(val), {
+          message: "REGON musi mieć 14 cyfr lub pozostać pusty",
+        })
+        .optional(),
+      addressL1: z
+        .string()
+        .max(512, { message: "Adres przekracza maksymalny rozmiar." })
+        .optional(),
+      addressL2: z
+        .string()
+        .max(512, { message: "Adres przekracza maksymalny rozmiar." })
+        .optional(),
+      addressCorrespondanceL1: z
+        .string()
+        .max(512, { message: "Adres przekracza maksymalny rozmiar." })
+        .optional(),
+      addressCorrespondanceL2: z
+        .string()
+        .max(512, { message: "Adres przekracza maksymalny rozmiar." })
+        .optional(),
+      email: z
+        .string()
+        .refine(
+          (val) =>
+            val === "" ||
+            /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/.test(
+              val,
+            ),
+          {
+            message: "Wpisz poprawny e-mail lub pozostaw puste pole.",
+          },
+        )
+        .optional(),
+      phoneNumber: z
+        .string()
+        .max(16, {
+          message: "Numer telefonu może zawierać maksymalnie 16 znaków. (Wpisuj bez spacji)",
+        })
+        .optional(),
+      additionalInfo: z
+        .string()
+        .max(2048, { message: "Informacja dodatkowa przekracza maksymalny rozmiar." }),
+    })
+    .optional(),
 );
 
 const createCompanyMutation = useMutation({
@@ -127,34 +148,40 @@ const createCompanyMutation = useMutation({
       owner_id: props.userCompany ? currentUserStore.getUserId : null,
       name: values.name,
       nip: values.nip,
-      krs: values.krs ?? null,
-      regon: values.regon ?? null,
+      krs: emptyToNull(values.krs),
+      regon: emptyToNull(values.regon),
       country_code: selectedCountry.value?.code,
-      address_l1: values.addressL1 ?? null,
-      address_l2: values.addressL2 ?? null,
-      address_correspondance_l1: values.addressCorrespondanceL1 ?? null,
-      address_correspondance_l2: values.addressCorrespondanceL2 ?? null,
-      email: values.email ?? null,
-      phone_number: values.phoneNumber ?? null,
-      additional_info: values.additionalInfo ?? null,
+      address_l1: emptyToNull(values.addressL1),
+      address_l2: emptyToNull(values.addressL2),
+      address_correspondance_l1: emptyToNull(values.addressCorrespondanceL1),
+      address_correspondance_l2: emptyToNull(values.addressCorrespondanceL2),
+      email: emptyToNull(values.email),
+      phone_number: emptyToNull(values.phoneNumber),
+      additional_info: emptyToNull(values.additionalInfo),
     });
 
     return companyResp;
   },
 
-  onSuccess: (data, variables) => {
+  onSuccess: (data) => {
     if (props.userCompany && props.createOrUpdate === "create") {
-      currentUserStore.setCompanyData(
-        data.company_id,
-        variables.name,
-        variables.nip,
-        selectedCountry.value?.code,
-        variables.address_l1,
-        variables.address_l2,
-        variables.email,
-        variables.phone_number,
-        false,
-      );
+      currentUserStore.setCompanyData({
+        id: data.id,
+        owner_id: data.owner_id,
+        ksef_authorized: false,
+        name: initialValues.name,
+        nip: initialValues.nip,
+        krs: initialValues.krs ?? null,
+        regon: initialValues.regon ?? null,
+        country_code: selectedCountry.value?.code,
+        address_l1: initialValues.addressL1 ?? null,
+        address_l2: initialValues.addressL2 ?? null,
+        address_correspondance_l1: initialValues.addressCorrespondanceL1 ?? null,
+        address_correspondance_l2: initialValues.addressCorrespondanceL2 ?? null,
+        email: initialValues.email ?? null,
+        phone_number: initialValues.phoneNumber ?? null,
+        additional_info: initialValues.additionalInfo ?? null,
+      });
     }
     toast.add({ severity: "success", summary: "Firma dodana pomyślnie!", life: 3000 });
     emit("success");
@@ -165,40 +192,70 @@ const createCompanyMutation = useMutation({
   },
 });
 
+const getCompanyMutation = useMutation({
+  mutationFn: async () => {
+    return await getUserCompany();
+  },
+  onSuccess: (data) => {
+    toast.add({ severity: "info", summary: "Poprawnie załadowano dane firmy", life: 3000 });
+    currentUserStore.setCompanyData({
+      id: data.id,
+      owner_id: data.owner_id,
+      ksef_authorized: data.ksef_authorized,
+      name: data.name,
+      nip: data.nip,
+      krs: data.krs ?? null,
+      regon: data.regon ?? null,
+      country_code: data.country_code,
+      address_l1: data.address_l1 ?? null,
+      address_l2: data.address_l2 ?? null,
+      address_correspondance_l1: data.address_correspondance_l1 ?? null,
+      address_correspondance_l2: data.address_correspondance_l2 ?? null,
+      email: data.email ?? null,
+      phone_number: data.phone_number ?? null,
+      additional_info: data.additional_info ?? null,
+    });
+  },
+  onError: (error: number) => {
+    if (error == 404) {
+      toast.add({ severity: "error", summary: "Użytkownik nie ma dodanej firmy", life: 3000 });
+    } else if (error == 409) {
+      toast.add({
+        severity: "warning",
+        summary: "Firma użytkownika nie zautoryzowana w KSeF",
+        life: 3000,
+      });
+    } else {
+      toast.add({ severity: "error", summary: "Błąd podczas pobierania danych firmy", life: 3000 });
+    }
+  },
+});
+
 const updateCompanyMutation = useMutation({
   mutationFn: async (values: any) => {
     const companyResp = await updateCompany({
-      id: props.companyBrief?.id,
+      id: props.companyInfo?.id,
+      owner_id: props.userCompany ? currentUserStore.getUserId : null,
       name: values.name,
       nip: values.nip,
-      krs: values.krs ?? null,
-      regon: values.regon ?? null,
+      krs: emptyToNull(values.krs),
+      regon: emptyToNull(values.regon),
       country_code: selectedCountry.value?.code,
-      address_l1: values.addressL1 ?? null,
-      address_l2: values.addressL2 ?? null,
-      address_correspondance_l1: values.addressCorrespondanceL1 ?? null,
-      address_correspondance_l2: values.addressCorrespondanceL2 ?? null,
-      email: values.email ?? null,
-      phone_number: values.phoneNumber ?? null,
-      additional_info: values.additionalInfo ?? null,
+      address_l1: emptyToNull(values.addressL1),
+      address_l2: emptyToNull(values.addressL2),
+      address_correspondance_l1: emptyToNull(values.addressCorrespondanceL1),
+      address_correspondance_l2: emptyToNull(values.addressCorrespondanceL2),
+      email: emptyToNull(values.email),
+      phone_number: emptyToNull(values.phoneNumber),
+      additional_info: emptyToNull(values.additionalInfo),
     });
 
     return companyResp;
   },
 
-  onSuccess: (data, variables) => {
+  onSuccess: () => {
     if (props.userCompany && props.createOrUpdate === "update") {
-      currentUserStore.setCompanyData(
-        data,
-        variables.name,
-        variables.nip,
-        variables.country_code,
-        variables.address_l1,
-        variables.address_l2,
-        variables.email,
-        variables.phone_number,
-        true,
-      );
+      getCompanyMutation.mutate();
     }
     toast.add({
       severity: "success",
@@ -242,7 +299,7 @@ watch(
       await getCountryCodesMutation.mutateAsync();
       if (props.createOrUpdate === "update") {
         selectedCountry.value = countries.value.find(
-          (c) => c.code === props.companyBrief?.country_code,
+          (c) => c.code === props.companyInfo?.country_code,
         );
       } else {
         selectedCountry.value = countries.value.find((c) => c.code === "PL");

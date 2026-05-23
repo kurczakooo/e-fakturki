@@ -55,23 +55,27 @@ const visible = ref(true);
 
 const getCompanyMutation = useMutation({
   mutationFn: async () => {
-    return await getUserCompany({
-      user_id: currentUserStore.getUserId,
-    });
+    return await getUserCompany();
   },
   onSuccess: (data) => {
     toast.add({ severity: "info", summary: "Poprawnie załadowano dane firmy", life: 3000 });
-    currentUserStore.setCompanyData(
-      data.company_id,
-      data.name,
-      data.nip,
-      data.country_code,
-      data.address_l1,
-      data.address_l2,
-      data.email,
-      data.phone_number,
-      data.ksef_authorized,
-    );
+    currentUserStore.setCompanyData({
+      id: data.id,
+      owner_id: data.owner_id,
+      ksef_authorized: data.ksef_authorized,
+      name: data.name,
+      nip: data.nip,
+      krs: data.krs ?? null,
+      regon: data.regon ?? null,
+      country_code: data.country_code,
+      address_l1: data.address_l1 ?? null,
+      address_l2: data.address_l2 ?? null,
+      address_correspondance_l1: data.address_correspondance_l1 ?? null,
+      address_correspondance_l2: data.address_correspondance_l2 ?? null,
+      email: data.email ?? null,
+      phone_number: data.phone_number ?? null,
+      additional_info: data.additional_info ?? null,
+    });
   },
   onError: (error: number) => {
     if (error == 404) {

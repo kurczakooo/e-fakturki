@@ -7,7 +7,7 @@ import type {
   postInvoiceToKsefResponse,
 } from "../types/ksef";
 import { apiConfig } from "../../config";
-import type { InvoiceResponse } from "../types/invoices";
+import type { InvoiceObject } from "../types/invoices";
 
 const baseUrl = apiConfig.apiBaseUrl + apiConfig.endpoints.ksef;
 
@@ -18,7 +18,7 @@ export const createKsefCredentials = async (
     const formData = new FormData();
 
     formData.append("company_id", String(data.company_id));
-    formData.append("certificates_for_auth", String(data.certificates_for_auth));
+    formData.append("online_certificates", String(data.online_certificates));
     formData.append("certificate", data.certificate);
     formData.append("private_key", data.private_key);
     formData.append("password", data.password);
@@ -38,6 +38,7 @@ export const refreshInvoiceListFromKsef = async (
   data: getInvoicesListRequest,
   invoiceType: InvoiceType,
 ): Promise<string[]> => {
+  console.log(data);
   try {
     const response = await axios.post<string[]>(baseUrl + "/invoices", data, {
       params: {
@@ -54,9 +55,9 @@ export const refreshInvoiceListFromKsef = async (
 export const getInvoiceDetails = async (
   company_id: number,
   invoice_id: string,
-): Promise<InvoiceResponse> => {
+): Promise<InvoiceObject> => {
   try {
-    const response = await axios.post<InvoiceResponse>(
+    const response = await axios.post<InvoiceObject>(
       `${baseUrl}/single_invoice_download/${company_id}/${invoice_id}`,
     );
     console.log(response.data);
