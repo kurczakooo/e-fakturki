@@ -12,17 +12,18 @@ import {
   useToast,
 } from "primevue";
 import invoiceXml from "../../assets/mock_xml";
-import { emptyToNull } from "../../lib/utils";
+import { emptyToNull, formatDisplayDate, formatPLN, parsePolishDateTime } from "../../lib/utils";
 import { ref, watch } from "vue";
 import { useMutation } from "@tanstack/vue-query";
-import { getInvoiceDetails, postInvoiceToKsef } from "../../lib/services/ksefService";
+import { getInvoiceDetails, postInvoiceXmlToKsef } from "../../lib/services/ksefService";
 import type { InvoiceCompanyData, InvoiceObject } from "../../lib/types/invoices";
 import {
   ksefStatusHint,
   ksefStatusSeverity,
   paymentType,
   paymentStatusSeverity,
-  paymentOptions,
+  paymentStatusMapForComponents,
+  paymentStatus,
 } from "../../lib/types/invoices";
 import type { invoiceTableType } from "../../lib/types/invoices";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
@@ -30,8 +31,9 @@ import { createCompany } from "../../lib/services/companyService";
 
 const props = defineProps<{
   visible: boolean;
-  invoice_type: invoiceTableType;
   invoice: any;
+  invoice_type: invoiceTableType;
+  invoice_creation: boolean;
 }>();
 
 const toast = useToast();
@@ -41,7 +43,7 @@ const toggleKsefPopup = (event: any) => {
   ksefPopup.value.toggle(event);
 };
 const emit = defineEmits(["update:visible"]);
-const invoice = ref<InvoiceObject>();
+const invoiceData = ref<InvoiceObject | null>(null);
 const postInvoiceToKsefError = ref<string>("");
 
 const getInvoiceDetailsMutation = useMutation({
@@ -51,7 +53,7 @@ const getInvoiceDetailsMutation = useMutation({
   },
 
   onSuccess: (data) => {
-    invoice.value = structuredClone(data);
+    invoiceData.value = structuredClone(data);
   },
 
   onError: (data) => {
@@ -60,17 +62,17 @@ const getInvoiceDetailsMutation = useMutation({
 });
 
 const postInvoiceToKsefMutation = useMutation({
-  mutationFn: async (values: any) => {
-    const status = await postInvoiceToKsef(values.company_id, values.invoice_id);
+  mutationFn: async () => {
+    const status = await postInvoiceXmlToKsef(currentUserStore.getCompanyId, props.invoice.id);
     return status;
   },
 
   onSuccess: (data) => {
-    if (invoice.value) {
-      invoice.value.ksef_number = data.ksef_number;
-      invoice.value.invoicing_date = data.invoicing_date;
-      invoice.value.acquisition_date = data.acquisition_date;
-      invoice.value.permanent_storage_date = data.permanent_storage_date;
+    if (invoiceData.value) {
+      invoiceData.value.ksef_number = data.ksef_number;
+      invoiceData.value.invoicing_date = data.invoicing_date;
+      invoiceData.value.acquisition_date = data.acquisition_date;
+      invoiceData.value.permanent_storage_date = data.permanent_storage_date;
     }
     toast.add({ severity: "info", summary: "Pomyślnie wysłano fakturę do KSeF.", life: 3000 });
   },
@@ -88,19 +90,21 @@ const postInvoiceToKsefMutation = useMutation({
 const saveCompanyMutation = useMutation({
   mutationFn: async () => {
     const company =
-      props.invoice_type === "sales" ? invoice.value?.buyer_info : invoice.value?.seller_info;
+      props.invoice_type === "sales"
+        ? invoiceData.value?.buyer_info
+        : invoiceData.value?.seller_info;
 
     const companyResp = await createCompany({
       owner_id: null,
       name: company?.name,
       nip: company?.nip,
-      krs: null,
-      regon: null,
-      country_code: "PL",
+      krs: emptyToNull(company?.krs),
+      regon: emptyToNull(company?.regon),
+      country_code: company?.country_code || "PL",
       address_l1: emptyToNull(company?.address_l1),
       address_l2: emptyToNull(company?.address_l2),
-      address_correspondance_l1: null,
-      address_correspondance_l2: null,
+      address_correspondance_l1: emptyToNull(company?.address_correspondance_l1),
+      address_correspondance_l2: emptyToNull(company?.address_correspondance_l2),
       email: emptyToNull(company?.email),
       phone_number: emptyToNull(company?.phone),
       additional_info: null,
@@ -126,8 +130,8 @@ function collectAddress(companyInfo: InvoiceCompanyData) {
   return [companyInfo.address_l1, companyInfo.address_l2].filter(Boolean).join(", ");
 }
 
-function createFileName(invoice: any) {
-  return invoice.invoice_number.trim().replace(/\s+/g, "_");
+function createFileName(inv: any) {
+  return inv.invoice_number.trim().replace(/\s+/g, "_");
 }
 
 function onDownloadXml(fileName: string) {
@@ -155,11 +159,17 @@ function onPrintPdf() {}
 watch(
   () => props.visible,
   async (visible) => {
-    if (visible && props.invoice?.id) {
-      await getInvoiceDetailsMutation.mutateAsync({
-        company_id: currentUserStore.getCompanyId,
-        invoice_id: props.invoice.id,
-      });
+    if (visible) {
+      if (props.invoice_creation) {
+        // For new invoices, directly use props.invoice (handle both ref and direct value)
+        invoiceData.value = props.invoice?.value ?? props.invoice;
+      } else if (props.invoice?.id) {
+        // For existing invoices, fetch from API
+        await getInvoiceDetailsMutation.mutateAsync({
+          company_id: currentUserStore.getCompanyId,
+          invoice_id: props.invoice.id,
+        });
+      }
     }
   },
 );
@@ -172,7 +182,7 @@ watch(
     @update:visible="emit('update:visible', $event)"
     @hide="
       () => {
-        invoice.value = null;
+        invoiceData.value = null;
       }
     "
     modal
@@ -182,47 +192,52 @@ watch(
   >
     <!-- header -->
     <template #header>
-      <div v-if="invoice" class="flex-1 flex gap-4 items-center">
-        <Tag v-if="invoice.is_new" value="Nowa"></Tag>
+      <div v-if="invoiceData" class="flex-1 flex gap-4 items-center">
+        <Tag v-if="invoiceData.is_new" value="Nowa"></Tag>
         <span class="text-xl font-bold">
-          {{ `Faktura ${invoice.invoice_type.toUpperCase()} nr ${invoice.invoice_number}` }}
+          {{ `Faktura ${invoiceData.invoice_type.toUpperCase()} nr ${invoiceData.invoice_number}` }}
         </span>
         <Tag
-          :value="ksefStatusHint[invoice.ksef_status]"
-          :severity="ksefStatusSeverity[invoice.ksef_status]"
+          :value="ksefStatusHint[invoiceData.ksef_status]"
+          :severity="ksefStatusSeverity[invoiceData.ksef_status]"
         ></Tag>
-        <Button
-          v-if="invoice.ksef_status === 'accepted' || invoice.ksef_status === 'rejected'"
-          icon="pi pi-info-circle"
-          outlined
-          v-tooltip.top="'Szczegóły'"
-          @click="toggleKsefPopup"
-          :loading="postInvoiceToKsefMutation.isPending.value"
-          :disabled="postInvoiceToKsefMutation.isPending.value"
-        ></Button>
-        <Button
-          v-if="invoice.ksef_status === 'not_sent' || invoice.ksef_status === 'rejected'"
-          icon="pi pi-send"
-          outlined
-          v-tooltip.top="'Wyślij do KSeF'"
-          @click="postInvoiceToKsefMutation.mutate"
-          :loading="postInvoiceToKsefMutation.isPending.value"
-          :disabled="postInvoiceToKsefMutation.isPending.value"
-        ></Button>
+        <div v-if="!props.invoice_creation">
+          <Button
+            v-if="invoiceData.ksef_status === 'accepted' || invoiceData.ksef_status === 'rejected'"
+            icon="pi pi-info-circle"
+            outlined
+            v-tooltip.top="'Szczegóły'"
+            @click="toggleKsefPopup"
+            :loading="postInvoiceToKsefMutation.isPending.value"
+            :disabled="postInvoiceToKsefMutation.isPending.value"
+          ></Button>
+          <Button
+            v-if="invoiceData.ksef_status === 'not_sent' || invoiceData.ksef_status === 'rejected'"
+            icon="pi pi-send"
+            outlined
+            v-tooltip.top="'Wyślij do KSeF'"
+            @click="postInvoiceToKsefMutation.mutate"
+            :loading="postInvoiceToKsefMutation.isPending.value"
+            :disabled="postInvoiceToKsefMutation.isPending.value"
+          ></Button>
+        </div>
       </div>
     </template>
 
     <!-- content -->
-    <div v-if="invoice" class="mr-4 ml-4">
+    <div v-if="invoiceData" class="mr-4 ml-4">
       <!-- issue date and place -->
       <div class="flex-1 flex flex-col text-end">
         <span>Miejsce i data wystawienia: </span>
         <div>
           <span class="font-semibold">
-            {{ invoice.issue_place ? `${invoice.issue_place}, ` : "-, " }}
+            {{ invoiceData.issue_place ? `${invoiceData.issue_place}, ` : "-, " }}
           </span>
-          <span class="font-semibold">
-            {{ new Date(invoice.issue_date).toLocaleDateString() }}
+          <span v-if="!invoice_creation" class="font-semibold">
+            {{ new Date(invoiceData.issue_date).toLocaleDateString() }}
+          </span>
+          <span v-else class="font-semibold">
+            {{ parsePolishDateTime(invoiceData.issue_date).toLocaleDateString() }}
           </span>
         </div>
       </div>
@@ -231,9 +246,9 @@ watch(
         <Card>
           <template #title>Sprzedawca</template>
           <template #content>
-            <p class="m-0">{{ invoice.seller_info.name }}</p>
-            <p class="m-0">NIP {{ invoice.seller_info.nip }}</p>
-            <p class="m-0">{{ collectAddress(invoice.seller_info) }}</p>
+            <p class="m-0">{{ invoiceData.seller_info.name }}</p>
+            <p class="m-0">NIP {{ invoiceData.seller_info.nip }}</p>
+            <p class="m-0">{{ collectAddress(invoiceData.seller_info) }}</p>
           </template>
         </Card>
         <div
@@ -252,14 +267,14 @@ watch(
         <Card>
           <template #title>Nabywca</template>
           <template #content>
-            <p class="m-0">{{ invoice.buyer_info.name }}</p>
-            <p class="m-0">NIP {{ invoice.buyer_info.nip }}</p>
-            <p class="m-0">{{ collectAddress(invoice.buyer_info) }}</p>
+            <p class="m-0">{{ invoiceData.buyer_info.name }}</p>
+            <p class="m-0">NIP {{ invoiceData.buyer_info.nip }}</p>
+            <p class="m-0">{{ collectAddress(invoiceData.buyer_info) }}</p>
           </template>
         </Card>
       </div>
       <!-- invoice items -->
-      <DataTable :value="invoice.entries || []">
+      <DataTable :value="invoiceData.entries || []">
         <Column field="row_number" header="Lp." style="width: 2%"></Column>
         <Column field="name" header="Nazwa towaru lub usługi" style="width: 25%"></Column>
         <Column field="amount" header="Ilość + J.m." style="width: 12%">
@@ -267,66 +282,76 @@ watch(
             <span>{{ slotProps.data.amount + " " + slotProps.data.unit }}</span>
           </template>
         </Column>
-        <Column field="net_price" header="Cena netto (zł)" style="width: 10%">
+        <Column field="net_price" header="Cena netto" style="width: 10%">
           <template #body="slotProps">
-            <span v-if="slotProps.data.net_price">{{ slotProps.data.net_price.toFixed(2) }}</span>
+            <span v-if="slotProps.data.net_price">{{
+              formatPLN(slotProps.data.net_price || 0)
+            }}</span>
             <span v-else>-</span>
           </template>
           <template #footer>
             <span class="font-semibold"> SUMA: </span>
           </template>
         </Column>
-        <Column field="net_total" header="Wartość netto (zł)" style="width: 10%">
+        <Column field="net_total" header="Wartość netto" style="width: 10%">
           <template #body="slotProps">
-            <span v-if="slotProps.data.net_total">{{ slotProps.data.net_total.toFixed(2) }}</span>
+            <span v-if="slotProps.data.net_total">{{
+              formatPLN(slotProps.data.net_total || 0)
+            }}</span>
             <span v-else>-</span>
           </template>
           <template #footer>
             <span class="font-semibold">
-              {{ invoice.net_total.toFixed(2) }}
+              {{ formatPLN(invoiceData.net_total || 0) }}
             </span>
           </template>
         </Column>
         <Column field="tax_rate" header="Stawka VAT" style="width: 7%">
           <template #body="slotProps">
-            <span>{{ slotProps.data.tax_rate + "%" }}</span>
+            <span>{{
+              props.invoice_creation
+                ? slotProps.data.tax_rate.display_text
+                : slotProps.data.tax_rate + "%"
+            }}</span>
           </template>
         </Column>
-        <Column field="tax_total" header="Wartość VAT (zł)" style="width: 10%">
+        <Column field="tax_total" header="Wartość VAT" style="width: 10%">
           <template #body="slotProps">
-            <span v-if="slotProps.data.tax_total">{{ slotProps.data.tax_total.toFixed(2) }}</span>
+            <span v-if="slotProps.data.tax_total">{{
+              formatPLN(slotProps.data.tax_total || 0)
+            }}</span>
             <span v-else>-</span>
           </template>
           <template #footer>
-            <span v-if="invoice.tax_total" class="font-semibold">
-              {{ invoice.tax_total.toFixed(2) }}
+            <span v-if="invoiceData.tax_total" class="font-semibold">
+              {{ formatPLN(invoiceData.tax_total || 0) }}
             </span>
             <span v-else>-</span>
           </template>
         </Column>
         <Column
-          v-if="invoice.entries[0]?.gross_price"
+          v-if="invoiceData.entries[0]?.gross_price"
           field="gross_price"
-          header="Cena brutto (zł)"
+          header="Cena brutto"
           style="width: 10%"
         >
           <template #body="slotProps">
             <span v-if="slotProps.data.gross_price">{{
-              slotProps.data.gross_price.toFixed(2)
+              formatPLN(slotProps.data.gross_price || 0)
             }}</span>
             <span v-else>-</span>
           </template>
         </Column>
-        <Column field="gross_total" header="Wartość brutto (zł)" style="width: 10%">
+        <Column field="gross_total" header="Wartość brutto" style="width: 10%">
           <template #body="slotProps">
             <span v-if="slotProps.data.gross_total">{{
-              slotProps.data.gross_total.toFixed(2)
+              formatPLN(slotProps.data.gross_total || 0)
             }}</span>
             <span v-else>-</span>
           </template>
           <template #footer>
             <span class="font-semibold">
-              {{ invoice.gross_total.toFixed(2) }}
+              {{ formatPLN(invoiceData.gross_total || 0) }}
             </span>
           </template>
         </Column>
@@ -334,7 +359,9 @@ watch(
       <!-- summary -->
       <div class="mt-4">
         <Card>
-          <template #title>Do zapłaty:&nbsp;&nbsp;{{ invoice.gross_total.toFixed(2) }} zł</template>
+          <template #title
+            >Do zapłaty:&nbsp;&nbsp;{{ formatPLN(invoiceData?.gross_total || 0) }}</template
+          >
           <template #content>
             <!-- <span>{{ "słownie: " }}</span> -->
           </template>
@@ -343,30 +370,48 @@ watch(
 
       <!-- payment info -->
       <Divider />
-      <div v-if="invoice.payment" class="flex mt-4">
+      <div v-if="invoiceData.payment" class="flex mt-4">
         <!-- left info -->
         <div class="flex-1 flex flex-col text-start">
           <span>Rodzaj płatności: </span>
           <span class="font-semibold">
-            {{ paymentType[invoice.payment.payment_type] }}
+            {{ paymentType[invoiceData.payment.payment_type] }}
           </span>
-          <span>Termin płatności: </span>
-          <span class="font-semibold">
-            {{ new Date(invoice.payment.payment_due_date).toLocaleDateString() }}
-          </span>
+          <div v-if="invoiceData.payment.payment_due_date">
+            <span>Termin płatności: </span>
+            <span class="font-semibold">
+              {{
+                invoice_creation
+                  ? parsePolishDateTime(invoiceData.payment.payment_due_date).toLocaleDateString()
+                  : new Date(invoiceData.payment.payment_due_date).toLocaleDateString()
+              }}
+            </span>
+          </div>
+          <div v-else-if="invoiceData.payment.payment_date">
+            <span>Data płatności: </span>
+            <span class="font-semibold">
+              {{
+                invoice_creation
+                  ? parsePolishDateTime(invoiceData.payment.payment_date).toLocaleDateString()
+                  : new Date(invoiceData.payment.payment_date).toLocaleDateString()
+              }}
+            </span>
+          </div>
           <div class="mt-2">
             <span>Dane płatności: </span>
-            <div v-if="invoice.payment.seller_bank_account_number">
+            <div>
               <span>Numer konta: </span>
-              <span class="font-semibold">
-                {{ invoice.payment.seller_bank_account_number }}
+              <span v-if="invoiceData.payment.seller_bank_account_number" class="font-semibold">
+                {{ invoiceData.payment.seller_bank_account_number }}
               </span>
+              <span v-else class="font-semibold">-</span>
             </div>
-            <div v-if="invoice.payment.seller_bank_name">
+            <div>
               <span>Bank: </span>
-              <span class="font-semibold">
-                {{ invoice.payment.seller_bank_name }}
+              <span v-if="invoiceData.payment.seller_bank_name" class="font-semibold">
+                {{ invoiceData.payment.seller_bank_name }}
               </span>
+              <span v-else class="font-semibold">-</span>
             </div>
           </div>
         </div>
@@ -374,8 +419,9 @@ watch(
         <div class="flex-1 flex justify-end items-start gap-4">
           <div class="flex gap-4 items-center">
             <Select
-              v-model="invoice.payment.payment_status"
-              :options="paymentOptions"
+              v-if="!props.invoice_creation"
+              v-model="invoiceData.payment.payment_status"
+              :options="paymentStatusMapForComponents"
               optionLabel="label"
               optionValue="value"
               placeholder="Wybierz status płatności"
@@ -390,12 +436,19 @@ watch(
               <template #value="slotProps">
                 <Tag
                   v-if="slotProps.value"
-                  :value="paymentOptions.find((o) => o.value === slotProps.value)?.label"
+                  :value="
+                    paymentStatusMapForComponents.find((o) => o.value === slotProps.value)?.label
+                  "
                   :severity="paymentStatusSeverity[slotProps.value]"
                 />
                 <span v-else class="text-gray-400"> Wybierz status płatności </span>
               </template>
             </Select>
+            <Tag
+              v-else
+              :value="paymentStatus[invoiceData.payment.payment_status]"
+              :severity="paymentStatusSeverity[invoiceData.payment.payment_status]"
+            />
           </div>
         </div>
       </div>
@@ -406,33 +459,33 @@ watch(
         <div class="flex-1 flex flex-col">
           <span>Adnotacje: </span>
           <span class="font-semibold">
-            {{ invoice.annotations || "-" }}
+            {{ invoiceData.annotations || "-" }}
           </span>
         </div>
         <div class="flex-1 flex flex-col">
           <span>Rejestry: </span>
           <span class="font-semibold">
-            {{ invoice.footer_registers || "-" }}
+            {{ invoiceData.footer_registers || "-" }}
           </span>
         </div>
         <div class="flex-1 flex flex-col">
           <span>Dodatkowe informacje: </span>
           <span class="font-semibold">
-            {{ invoice.additional_info || "-" }}
+            {{ invoiceData.additional_info || "-" }}
           </span>
           <span class="font-semibold">
-            {{ invoice.footer_info || "-" }}
+            {{ invoiceData.footer_info || "-" }}
           </span>
         </div>
       </div>
     </div>
 
-    <template #footer v-if="invoice">
+    <template #footer v-if="invoiceData">
       <Button
         label="Pobierz XML"
         icon="pi pi-download"
         outlined
-        @click="() => onDownloadXml(createFileName(invoice))"
+        @click="() => onDownloadXml(createFileName(invoiceData))"
       ></Button>
       <Button
         disabled
@@ -447,15 +500,15 @@ watch(
 
   <!-- ksef popup -->
   <Popover ref="ksefPopup">
-    <div v-if="invoice?.ksef_status === 'accepted'" class="flex flex-col w-130">
+    <div v-if="invoiceData?.ksef_status === 'accepted'" class="flex flex-col w-130">
       <div>
         <span>Numer KSeF: </span>
-        <span class="font-semibold">{{ invoice?.ksef_number }}</span>
+        <span class="font-semibold">{{ invoiceData?.ksef_number }}</span>
       </div>
       <div>
         <span>Data przyjęcia faktury w systemie KSeF: </span>
         <span class="font-semibold">{{
-          new Date(invoice?.invoicing_date).toLocaleString("pl-PL", {
+          new Date(invoiceData?.invoicing_date).toLocaleString("pl-PL", {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
@@ -467,7 +520,7 @@ watch(
       <div>
         <span>Data nadania numeru KSeF: </span>
         <span class="font-semibold">{{
-          new Date(invoice?.acquisition_date).toLocaleString("pl-PL", {
+          new Date(invoiceData?.acquisition_date).toLocaleString("pl-PL", {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
@@ -479,7 +532,7 @@ watch(
       <div>
         <span>Data trwałego zapisu faktury w KSeF: </span>
         <span class="font-semibold">{{
-          new Date(invoice?.permanent_storage_date).toLocaleString("pl-PL", {
+          new Date(invoiceData?.permanent_storage_date).toLocaleString("pl-PL", {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
@@ -489,7 +542,7 @@ watch(
         }}</span>
       </div>
     </div>
-    <div v-if="invoice?.ksef_status === 'rejected'" class="flex flex-col w-130">
+    <div v-if="invoiceData?.ksef_status === 'rejected'" class="flex flex-col w-130">
       <span>Szczegóły odrzucenia faktury przez KSeF: </span>
       <span class="font-semibold">{{ postInvoiceToKsefError }}</span>
     </div>

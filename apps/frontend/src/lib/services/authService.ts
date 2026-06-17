@@ -20,76 +20,76 @@ axios.interceptors.request.use((config) => {
 });
 
 // Axios interceptor to handle 401 responses
-// axios.interceptors.response.use(
-//   (response) => response,
-//   (error) => {
-//     if (error.response?.status === 401) {
-//       userLogout();
-//       router.push("/login");
-//     }
-
-//     return Promise.reject(error);
-//   },
-// );
-
-let isRefreshing = false;
-let failedQueue: any[] = [];
-
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
-
 axios.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    const currentUserStore = useCurrentUserStore();
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // 🔥 kolejkuj requesty
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return axios(originalRequest);
-        });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const response = await axios.post(baseUrl + "/auth/refresh", {}, { withCredentials: true });
-
-        const newToken = response.data.access_token;
-
-        currentUserStore.setToken(newToken);
-
-        processQueue(null, newToken);
-
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return axios(originalRequest);
-      } catch (err) {
-        processQueue(err, null);
-        userLogout();
-        router.push("/login");
-        return Promise.reject(err);
-      } finally {
-        isRefreshing = false;
-      }
+  (error) => {
+    if (error.response?.status === 401) {
+      userLogout();
+      router.push("/login");
     }
 
     return Promise.reject(error);
   },
 );
+
+// let isRefreshing = false;
+// let failedQueue: any[] = [];
+
+// const processQueue = (error: any, token: string | null = null) => {
+//   failedQueue.forEach((prom) => {
+//     if (error) {
+//       prom.reject(error);
+//     } else {
+//       prom.resolve(token);
+//     }
+//   });
+//   failedQueue = [];
+// };
+
+// axios.interceptors.response.use(
+//   (response) => response,
+//   async (error) => {
+//     const originalRequest = error.config;
+//     const currentUserStore = useCurrentUserStore();
+
+//     if (error.response?.status === 401 && !originalRequest._retry) {
+//       if (isRefreshing) {
+//         // 🔥 kolejkuj requesty
+//         return new Promise((resolve, reject) => {
+//           failedQueue.push({ resolve, reject });
+//         }).then((token) => {
+//           originalRequest.headers.Authorization = `Bearer ${token}`;
+//           return axios(originalRequest);
+//         });
+//       }
+
+//       originalRequest._retry = true;
+//       isRefreshing = true;
+
+//       try {
+//         const response = await axios.post(baseUrl + "/auth/refresh", {}, { withCredentials: true });
+
+//         const newToken = response.data.access_token;
+
+//         currentUserStore.setToken(newToken);
+
+//         processQueue(null, newToken);
+
+//         originalRequest.headers.Authorization = `Bearer ${newToken}`;
+//         return axios(originalRequest);
+//       } catch (err) {
+//         processQueue(err, null);
+//         userLogout();
+//         router.push("/login");
+//         return Promise.reject(err);
+//       } finally {
+//         isRefreshing = false;
+//       }
+//     }
+
+//     return Promise.reject(error);
+//   },
+// );
 
 export const decodeToken = (token: string): any => {
   try {
@@ -126,7 +126,7 @@ export const userLogout = () => {
   const currentUserStore = useCurrentUserStore();
   currentUserStore.setToken("");
   currentUserStore.setUserData(null as any, null as any, null as any, null as any, null as any);
-  currentUserStore.setCompanyData(null as any, null as any, false);
+  currentUserStore.setCompanyData(null as any);
 };
 
 export const userSignUp = async (data: SignUpRequest): Promise<LoginResponse> => {

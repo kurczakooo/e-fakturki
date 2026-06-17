@@ -68,12 +68,27 @@ export const getInvoiceDetails = async (
 };
 
 export const postInvoiceToKsef = async (
-  company_id: number,
-  invoice_id: string,
+  data: InvoiceObject,
+  companyId: string,
 ): Promise<postInvoiceToKsefResponse> => {
   try {
     const response = await axios.post<postInvoiceToKsefResponse>(
-      `${baseUrl}/single_invoice_upload/${company_id}/${invoice_id}`,
+      `${baseUrl}/${companyId}/single_upload`,
+      data,
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const postInvoiceXmlToKsef = async (
+  companyId: string,
+  invoiceId: string,
+): Promise<postInvoiceToKsefResponse> => {
+  try {
+    const response = await axios.post<postInvoiceToKsefResponse>(
+      `${baseUrl}/${companyId}/single_xml_upload/${invoiceId}`,
     );
     return response.data;
   } catch (error) {

@@ -17,7 +17,25 @@ export const createCompany = async (data: CompanyCreate): Promise<CompanyCreateR
   try {
     const response = await axios.post<CompanyCreateResponse>(baseUrl, data);
     return response.data;
-  } catch (error) {
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data as { detail?: string } | undefined;
+      if (responseData?.detail) {
+        switch (true) {
+          case responseData.detail.includes("companies.nip"):
+            responseData.detail = "Firma z tym numerem NIP już istnieje w bazie danych.";
+            break;
+          case responseData.detail.includes("companies.krs"):
+            responseData.detail = "Firma z tym numerem KRS już istnieje w bazie danych.";
+            break;
+          case responseData.detail.includes("companies.regon"):
+            responseData.detail = "Firma z tym numerem REGON już istnieje w bazie danych.";
+            break;
+          default:
+            break;
+        }
+      }
+    }
     throw error;
   }
 };
@@ -27,6 +45,24 @@ export const updateCompany = async (data: CompanyReadUpdate): Promise<CompanyCre
     const response = await axios.put<CompanyCreateResponse>(baseUrl, data);
     return response.data;
   } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data as { detail?: string } | undefined;
+      if (responseData?.detail) {
+        switch (true) {
+          case responseData.detail.includes("companies.nip"):
+            responseData.detail = "Firma z tym numerem NIP już istnieje w bazie danych.";
+            break;
+          case responseData.detail.includes("companies.krs"):
+            responseData.detail = "Firma z tym numerem KRS już istnieje w bazie danych.";
+            break;
+          case responseData.detail.includes("companies.regon"):
+            responseData.detail = "Firma z tym numerem REGON już istnieje w bazie danych.";
+            break;
+          default:
+            break;
+        }
+      }
+    }
     throw error;
   }
 };

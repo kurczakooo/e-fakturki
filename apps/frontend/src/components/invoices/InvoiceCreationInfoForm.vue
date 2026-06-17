@@ -2,8 +2,12 @@
 import { Form, FormField } from "@primevue/forms";
 import { zodResolver } from "@primevue/forms/resolvers/zod";
 import { Panel, InputText, FloatLabel, Message, DatePicker } from "primevue";
-import { reactive, watch } from "vue";
+import { watch, ref } from "vue";
 import z from "zod";
+
+const props = defineProps<{
+  disabled: boolean;
+}>();
 
 const emit = defineEmits<{
   update: [
@@ -15,32 +19,48 @@ const emit = defineEmits<{
   ];
 }>();
 
-const initialValues = reactive({
-  invoiceNumber: "",
-  issuePlace: "",
-  invoiceDate: new Date() as Date | null,
-});
-
 const resolver = zodResolver(
   z.object({
     invoiceNumber: z
       .string()
       .min(1, { message: "Numer faktury jest wymagany." })
       .max(256, { message: "Numer faktury może mieć maksymalnie 256 znaków." }),
-
+    invoiceDate: z.date(),
     issuePlace: z.string().min(1, { message: "Miejsce wystawienia jest wymagane." }).max(256, {
       message: "Miejsce wystawienia może mieć maksymalnie 256 znaków.",
     }),
   }),
 );
 
+// reference to the form
+const formRef = ref();
+const initialInvoiceDate = new Date();
+
+async function validate() {
+  const result = await formRef.value?.validate();
+  const isValid = !result?.errors || Object.keys(result.errors).length === 0;
+  return isValid;
+}
+
+function reset() {
+  formRef.value.reset();
+}
+
+defineExpose({
+  validate,
+  reset,
+});
+
 watch(
-  initialValues,
-  () => {
+  // A watcher that emits the updated values with every change to the form values
+  () => formRef.value?.states,
+  (values) => {
+    if (!values) return;
+
     emit("update", {
-      invoiceNumber: initialValues.invoiceNumber,
-      issuePlace: initialValues.issuePlace,
-      invoiceDate: initialValues.invoiceDate,
+      invoiceNumber: values.invoiceNumber.value,
+      issuePlace: values.issuePlace.value,
+      invoiceDate: values.invoiceDate.value,
     });
   },
   { deep: true },
@@ -53,45 +73,54 @@ watch(
       <span class="text-xl font-bold">Dane Faktury</span>
     </template>
 
-    <Form :initialValues="initialValues" :resolver="resolver" class="flex flex-1 gap-2">
-      <!-- invoice number -->
-      <FormField v-slot="$field" name="invoiceNumber">
+    <Form ref="formRef" :resolver="resolver" class="flex flex-1 gap-4">
+      <!-- INVOICE NUMBER -->
+      <FormField v-slot="$field" initialValue="" name="invoiceNumber" class="sm:w-100">
         <FloatLabel variant="on">
           <InputText
             v-bind="$field.props"
-            v-model="initialValues.invoiceNumber"
+            v-model="$field.value"
+            :disabled="props.disabled"
             id="invoiceNumber_input"
             type="text"
             fluid
           />
           <label for="invoiceNumber_input">Numer Faktury</label>
         </FloatLabel>
-
         <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">
           {{ $field.error?.message }}
         </Message>
       </FormField>
 
-      <!-- invoice date -->
-      <FormField v-slot="$field" name="invoiceDate">
+      <!-- INVOICE DATE -->
+      <FormField
+        v-slot="$field"
+        :initialValue="initialInvoiceDate"
+        name="invoiceDate"
+        class="sm:w-100"
+      >
         <FloatLabel variant="on">
           <DatePicker
-            v-model="initialValues.invoiceDate"
+            v-bind="$field.props"
+            v-model="$field.value"
+            :disabled="props.disabled"
             inputId="invoiceDate"
             dateFormat="yy/mm/dd"
             fluid
+            showIcon
             iconDisplay="input"
           />
           <label for="invoiceDate">Data wystawienia</label>
         </FloatLabel>
       </FormField>
 
-      <!-- issue place -->
-      <FormField v-slot="$field" name="issuePlace">
+      <!-- ISSUE PLACE -->
+      <FormField v-slot="$field" initialValue="" name="issuePlace" class="sm:w-100">
         <FloatLabel variant="on">
           <InputText
             v-bind="$field.props"
-            v-model="initialValues.issuePlace"
+            v-model="$field.value"
+            :disabled="props.disabled"
             id="issuePlace_input"
             type="text"
             fluid

@@ -123,7 +123,7 @@ const loginMutation = useMutation({
   },
 
   onError: (error: number) => {
-    if (error === 401) {
+    if (error === 404) {
       toast.add({ severity: "error", summary: "Nieprawidłowy email lub hasło", life: 4000 });
     } else {
       toast.add({ severity: "error", summary: "Coś poszło nie tak", life: 4000 });
@@ -187,6 +187,7 @@ const onFormSubmit = async (loggingIn: boolean, event: FormSubmitEvent) => {
     @update:visible="emit('update:visible', $event)"
     modal
     :draggable="false"
+    :closable="false"
     :style="{ width: '40rem' }"
   >
     <template #header>

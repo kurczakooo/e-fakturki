@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useToast } from "primevue";
-import { Message, FloatLabel, InputText, Dialog, Button, Select } from "primevue";
+import { Message, FloatLabel, InputText, Dialog, Button, Select, InputNumber } from "primevue";
 import { Form, FormField, type FormSubmitEvent } from "@primevue/forms";
 
 import { useCurrentUserStore } from "../../stores/currentUserStore";
@@ -35,8 +35,8 @@ const initialValues = reactive({
   description: "",
   gtin: "",
   unit: "",
-  netPrice: null,
-  grossPrice: null,
+  netPrice: 0,
+  grossPrice: 0,
 });
 
 function resetInitialValues() {
@@ -44,8 +44,8 @@ function resetInitialValues() {
   initialValues.description = props.productInfo?.description ?? "";
   initialValues.gtin = props.productInfo?.gtin ?? "";
   initialValues.unit = props.productInfo?.unit ?? "";
-  initialValues.netPrice = props.productInfo?.net_price ?? null;
-  initialValues.grossPrice = props.productInfo?.gross_price ?? null;
+  initialValues.netPrice = props.productInfo?.net_price ?? 0;
+  initialValues.grossPrice = props.productInfo?.gross_price ?? 0;
 }
 
 const resolver = zodResolver(
@@ -58,14 +58,8 @@ const resolver = zodResolver(
       .max(256, { message: "Jednostka miary przekracza maksymalny rozmiar." })
       .min(1, { message: "Jednostka miary jest wymagana." }),
     netPrice: z
-      .string()
-      .min(1, { message: "Cena netto jest wymagana." })
-      .refine((val) => !isNaN(Number(val)), {
-        message: "Cena netto musi być liczbą.",
-      })
-      .refine((val) => Number(val) >= 0, {
-        message: "Cena netto musi być nieujemna.",
-      }),
+      .number({ message: "Cena netto musi być liczbą." })
+      .min(0, { message: "Cena netto musi być nieujemna." }),
     grossPrice: z.coerce
       .number({ message: "Cena brutto musi być liczbą." })
       .min(0, { message: "Cena brutto musi być nieujemna." }),
@@ -74,25 +68,18 @@ const resolver = zodResolver(
 
 const createProductMutation = useMutation({
   mutationFn: async (values: any) => {
-    if (
-      verifyNetVsGrossPrice(values.netPrice, values.grossPrice, selectedTaxRate.value?.value) &&
-      selectedTaxRate.value
-    ) {
-      const productResp = await createProduct({
-        name: values.name,
-        company_id: currentUserStore.getCompanyId,
-        description: values.description,
-        gtin: values.gtin,
-        unit: values.unit,
-        net_price: values.netPrice,
-        tax_rate: selectedTaxRate.value?.str_repr,
-        gross_price: values.grossPrice,
-      });
+    const productResp = await createProduct({
+      name: values.name,
+      company_id: currentUserStore.getCompanyId,
+      description: values.description,
+      gtin: values.gtin,
+      unit: values.unit,
+      net_price: values.netPrice,
+      tax_rate: selectedTaxRate.value?.str_repr,
+      gross_price: values.grossPrice,
+    });
 
-      return productResp;
-    } else {
-      throw new Error("Ceny netto i brutto nie zgadzają się.");
-    }
+    return productResp;
   },
 
   onSuccess: () => {
@@ -109,13 +96,14 @@ const createProductMutation = useMutation({
 const updateProductMutation = useMutation({
   mutationFn: async (values: any) => {
     const productResp = await updateProduct({
-      product_id: props.productInfo?.id,
+      id: props.productInfo?.id,
       name: values.name,
+      company_id: currentUserStore.getCompanyId,
       description: values.description,
       gtin: values.gtin,
       unit: values.unit,
       net_price: values.netPrice,
-      tax_rate: selectedTaxRate.value,
+      tax_rate: selectedTaxRate.value?.str_repr,
       gross_price: values.grossPrice,
     });
 
@@ -140,28 +128,37 @@ const onFormSubmit = async (event: FormSubmitEvent) => {
   const { valid } = event;
   if (!valid) return;
 
-  if (props.createOrUpdate === "update") updateProductMutation.mutate(event.values);
-  if (props.createOrUpdate === "create") createProductMutation.mutate(event.values);
+  const values = {
+    ...event.values,
+    grossPrice: calculateGrossPrice(event.values.netPrice, selectedTaxRate.value!.value),
+  };
+
+  if (verifyNetVsGrossPrice(values.netPrice, values.grossPrice, selectedTaxRate.value?.value)) {
+    if (props.createOrUpdate === "update") updateProductMutation.mutate(values);
+    if (props.createOrUpdate === "create") createProductMutation.mutate(values);
+  } else throw new Error("Ceny netto i brutto nie zgadzają się.");
 };
 
-function onNetPriceChange() {
+function onNetPriceChange(event: any) {
+  initialValues.netPrice = event.value;
+
   if (initialValues.netPrice == null || !selectedTaxRate.value) {
     return;
   }
 
   initialValues.grossPrice = calculateGrossPrice(
-    Number(initialValues.netPrice),
+    initialValues.netPrice,
     selectedTaxRate.value.value,
   );
 }
 
-function onGrossPriceChange() {
-  if (initialValues.grossPrice == null || !selectedTaxRate.value) {
+function onTaxRateChange() {
+  if (initialValues.netPrice == null || !selectedTaxRate.value) {
     return;
   }
 
-  initialValues.netPrice = calculateNetPrice(
-    Number(initialValues.grossPrice),
+  initialValues.grossPrice = calculateGrossPrice(
+    initialValues.netPrice,
     selectedTaxRate.value.value,
   );
 }
@@ -173,7 +170,7 @@ watch(
       resetInitialValues();
       if (props.createOrUpdate === "update") {
         selectedTaxRate.value = props.taxRates.find(
-          (tax) => tax.display_text === props.productInfo?.tax_rate,
+          (tax) => tax.str_repr === props.productInfo?.tax_rate,
         );
       } else {
         selectedTaxRate.value = props.taxRates.find((c) => c.str_repr === "23");
@@ -204,6 +201,7 @@ watch(
     <div class="card flex justify-center pt-2">
       <Form
         :initialValues="initialValues"
+        v-slot="$form"
         :resolver="resolver"
         @submit="onFormSubmit"
         class="flex flex-col gap-4 w-full items-center sm:w-150"
@@ -250,12 +248,14 @@ watch(
           <div class="flex flex-col gap-4 w-full">
             <FormField v-slot="$field" name="netPrice" class="flex flex-col gap-1">
               <FloatLabel variant="on">
-                <InputText
+                <InputNumber
                   v-bind="$field.props"
-                  id="netPrice_input"
-                  type="text"
-                  fluid
                   v-model="initialValues.netPrice"
+                  id="netPrice_input"
+                  mode="currency"
+                  currency="PLN"
+                  locale="pl-PL"
+                  fluid
                   @input="onNetPriceChange"
                 />
                 <label for="netPrice_input">Cena netto</label>
@@ -272,6 +272,7 @@ watch(
                 class="h-10.5"
                 emptyMessage="Brak opcji do wyboru"
                 fluid
+                @change="onTaxRateChange"
               >
                 <template #value="slotProps">
                   <div v-if="slotProps.value" class="flex items-center gap-2">
@@ -298,13 +299,15 @@ watch(
             </FloatLabel>
             <FormField v-slot="$field" name="grossPrice" class="flex flex-col gap-1">
               <FloatLabel variant="on">
-                <InputText
+                <InputNumber
                   v-bind="$field.props"
-                  id="grossPrice_input"
-                  type="text"
-                  fluid
                   v-model="initialValues.grossPrice"
-                  @input="onGrossPriceChange"
+                  id="grossPrice_input"
+                  mode="currency"
+                  currency="PLN"
+                  locale="pl-PL"
+                  fluid
+                  disabled
                 />
                 <label for="grossPrice_input">Cena brutto</label>
               </FloatLabel>

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Button, Toolbar } from "primevue";
 
+const props = defineProps<{
+  disabled: boolean;
+}>();
 const emits = defineEmits(["clear", "preview", "save", "saveAndSend"]);
 </script>
 
@@ -28,6 +31,7 @@ const emits = defineEmits(["clear", "preview", "save", "saveAndSend"]);
           outlined
           severity="info"
           @click="emits('preview')"
+          :disabled="props.disabled"
         />
 
         <Button
@@ -36,14 +40,16 @@ const emits = defineEmits(["clear", "preview", "save", "saveAndSend"]);
           raised
           severity="success"
           @click="emits('save')"
+          :disabled="props.disabled"
         />
 
         <Button
-          label="Zapisz fakturę i wyślij do KSeF"
+          label="Wyślij fakturę do KSeF"
           icon="pi pi-cloud-upload"
           raised
           severity="danger"
           @click="emits('saveAndSend')"
+          :disabled="props.disabled"
         />
       </div>
     </template>

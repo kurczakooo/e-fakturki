@@ -29,23 +29,33 @@ export const paymentType = {
   7: "Płatność mobilna",
 };
 
+export const paymentTypeMapForComponents = [
+  { label: "Gotówka", value: 1 },
+  { label: "Karta", value: 2 },
+  { label: "Bon", value: 3 },
+  { label: "Czek", value: 4 },
+  { label: "Kredyt/Pożyczka", value: 5 },
+  { label: "Przelew", value: 6 },
+  { label: "Płatność mobilna", value: 7 },
+];
+
 export const paymentStatus = {
   paid: "Opłacono",
   partial: "Częściowo opłacono",
   unpaid: "Nie opłacono",
 };
 
+export const paymentStatusMapForComponents = [
+  { label: "Nie opłacono", value: "unpaid" },
+  { label: "Opłacono", value: "paid" },
+  { label: "Częściowo opłacono", value: "partial" },
+];
+
 export const paymentStatusSeverity = {
   paid: "success",
   partial: "warn",
   unpaid: "danger",
 };
-
-export const paymentOptions = [
-  { label: "Nie opłacono", value: "unpaid" },
-  { label: "Opłacono", value: "paid" },
-  { label: "Częściowo opłacono", value: "partial" },
-];
 
 export type invoiceTableType = "sales" | "purchases";
 
@@ -66,10 +76,15 @@ export interface InvoiceEntry {
 export interface InvoiceCompanyData {
   name: string;
   nip: string;
-  address_l1: string;
-  address_l2: string;
+  krs: string | null;
+  regon: string | null;
+  country_code: string;
+  address_l1: string | null;
+  address_l2: string | null;
+  address_correspondance_l1: string | null;
+  address_correspondance_l2: string | null;
   email: string | null;
-  phone: string | null;
+  phone_number: string | null;
 }
 
 export interface InvoicePayment {

@@ -13,7 +13,7 @@ import {
   ksefStatusSeverity,
   paymentStatus,
   paymentStatusSeverity,
-  paymentOptions,
+  paymentStatusMapForComponents,
 } from "../../lib/types/invoices";
 import type { invoiceTableType } from "../../lib/types/invoices";
 import { useInvoicesStore } from "../../stores/invoicesStore";
@@ -28,9 +28,10 @@ const toast = useToast();
 const currentUserStore = useCurrentUserStore();
 const invoicesStore = useInvoicesStore();
 const tableType = props.table_type == "sales" ? "Faktury sprzedażowe" : "Faktury zakupowe";
+const date = ref<Date>(new Date());
 const dateRange = ref<Date[]>([
-  new Date(new Date().setMonth(new Date().getMonth() - 3)),
-  new Date(),
+  new Date(date.value.getFullYear(), date.value.getMonth(), 1, 0, 0, 0, 0),
+  new Date(date.value.getFullYear(), date.value.getMonth() + 1, 0, 23, 59, 59, 999),
 ]);
 const selectedInvoice = ref(null);
 const selectedInvoiceData = ref<any>(null);
@@ -53,13 +54,14 @@ const getInvoicesMutation = useMutation({
     const invoice_ksef_ids = await refreshInvoiceListFromKsef(
       {
         company_id: values.company_id,
-        date_from: addDays(values.date_from, 1),
+        date_from: values.date_from,
         date_to: values.date_to,
         page_size: values.page_size,
         page_offset: values.page_offset,
       },
       values.invoice_type,
     );
+    // const invoice_ksef_ids = [];
 
     const list_data = await getInvoicesList(
       {
@@ -185,6 +187,18 @@ function setCustomDateRange(range: string) {
   refreshInvoices();
 }
 
+function onRangeChange(event: any) {
+  const dateFrom = new Date(event);
+
+  dateFrom.setHours(0, 0, 0, 0);
+
+  const dateTo = new Date(event.getFullYear(), event.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  dateRange.value[0] = dateFrom;
+  dateRange.value[1] = dateTo;
+  refreshInvoices();
+}
+
 // function onLocalSort(event: any) {
 //   const { sortField, sortOrder } = event;
 
@@ -254,7 +268,7 @@ onMounted(() => {
         <span class="text-xl font-bold">{{ tableType }}</span>
         <div class="flex flex-1 justify-end gap-4">
           <FloatLabel variant="on">
-            <DatePicker
+            <!-- <DatePicker
               v-model="dateRange"
               selection-mode="range"
               :manual-input="false"
@@ -297,6 +311,16 @@ onMounted(() => {
                   />
                 </div>
               </template>
+            </DatePicker> -->
+            <DatePicker
+              v-model="date"
+              view="month"
+              :manual-input="false"
+              showIcon
+              iconDisplay="input"
+              date-format="yy/mm"
+              @date-select="onRangeChange"
+            >
             </DatePicker>
             <label for="on_label">Zakres dat</label>
           </FloatLabel>
@@ -362,7 +386,7 @@ onMounted(() => {
       <template #editor="{ data, field }">
         <Select
           v-model="data[field]"
-          :options="paymentOptions"
+          :options="paymentStatusMapForComponents"
           optionLabel="label"
           optionValue="value"
           placeholder="Select a Status"
@@ -384,5 +408,6 @@ onMounted(() => {
     v-model:visible="dialogVisible"
     :invoice="selectedInvoiceData"
     :invoice_type="props.table_type"
+    :invoice_creation="false"
   />
 </template>

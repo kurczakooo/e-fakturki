@@ -87,7 +87,10 @@ const items = ref([
             <span :class="item.icon" />
             <span class="ml-2">{{ item.label }}</span>
             <Badge
-              v-if="['/sales', '/purchases'].includes(item.route)"
+              v-if="
+                (item.route === '/sales' && invoicesStore.getSalesInvoicesCount > 0) ||
+                (item.route === '/purchases' && invoicesStore.getPurchaseInvoicesCount > 0)
+              "
               class="ml-auto rounded-xs"
               :value="
                 item.route === '/sales'

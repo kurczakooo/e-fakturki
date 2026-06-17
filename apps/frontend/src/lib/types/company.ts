@@ -1,8 +1,8 @@
 import type { PageInfo } from "./common";
 
 export interface IsoCountries {
-  name: string;
-  code: string;
+  label: string;
+  value: string;
 }
 
 export interface CompanyBase {

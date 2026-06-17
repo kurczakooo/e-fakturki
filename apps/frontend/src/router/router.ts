@@ -60,7 +60,7 @@ const router = createRouter({
   ],
 });
 
-router.beforeEach(async (to, from) => {
+router.beforeEach(async (to) => {
   const currentUserStore = useCurrentUserStore();
   const token = currentUserStore.getToken;
 
@@ -68,7 +68,7 @@ router.beforeEach(async (to, from) => {
     return { name: "login" };
   }
   if (to.name === "login" && token) {
-    return { name: "sales" };
+    return { name: "new-invoice" };
   }
 });
 

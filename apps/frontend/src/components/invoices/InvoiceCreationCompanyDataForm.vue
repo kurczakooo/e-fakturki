@@ -1,50 +1,39 @@
 <script setup lang="ts">
 import { Form, FormField } from "@primevue/forms";
 import { Panel, InputText, FloatLabel, Message, Select, useToast } from "primevue";
-import { reactive, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import { useCurrentUserStore } from "../../stores/currentUserStore";
 import type { IsoCountries } from "../../lib/types/company";
 import { useMutation } from "@tanstack/vue-query";
 import { getIsoCountries } from "../../lib/services/companyService";
 import { zodResolver } from "@primevue/forms/resolvers/zod";
 import z from "zod";
+import { emptyToNull } from "../../lib/utils";
 
-const emit = defineEmits<{
-  update: [data: any];
-}>();
 const props = defineProps<{
   seller: boolean;
+  disabled: boolean;
+}>();
+const emit = defineEmits<{
+  update: [
+    {
+      name: string;
+      nip: string;
+      krs: string | null;
+      regon: string | null;
+      countryCode: string;
+      addressL1: string;
+      addressL2: string | null;
+      addressCorrespondanceL1: string | null;
+      addressCorrespondanceL2: string | null;
+      email: string | null;
+      phoneNumber: string | null;
+    },
+  ];
 }>();
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
 const countries = ref<IsoCountries[]>([]);
-const selectedCountry = ref<IsoCountries>();
-
-const initialValues = reactive({
-  name: "",
-  nip: "",
-  krs: "",
-  regon: "",
-  addressL1: "",
-  addressL2: "",
-  addressCorrespondanceL1: "",
-  addressCorrespondanceL2: "",
-  email: "",
-  phoneNumber: "",
-});
-
-function resetInitialValues() {
-  initialValues.name = currentUserStore.getCompanyName ?? "";
-  initialValues.nip = currentUserStore.getCompanyNip ?? "";
-  initialValues.krs = currentUserStore.getCompanyKrs ?? "";
-  initialValues.regon = currentUserStore.getCompanyRegon ?? "";
-  initialValues.addressL1 = currentUserStore.getCompanyAddressL1 ?? "";
-  initialValues.addressL2 = currentUserStore.getCompanyAddressL2 ?? "";
-  initialValues.addressCorrespondanceL1 = currentUserStore.getCompanyAddressCorrespondanceL1 ?? "";
-  initialValues.addressCorrespondanceL2 = currentUserStore.getCompanyAddressCorrespondanceL2 ?? "";
-  initialValues.email = currentUserStore.getCompanyEmail ?? "";
-  initialValues.phoneNumber = currentUserStore.getCompanyPhoneNumber ?? "";
-}
 
 const resolver = zodResolver(
   z.object({
@@ -52,7 +41,6 @@ const resolver = zodResolver(
       .string()
       .min(3, { message: "Nazwa musi mieć min. 3 znaki." })
       .max(256, { message: "Nazwa firmy może mieć maksymalnie 256 znaków." }),
-
     nip: z
       .string()
       .min(1, { message: "NIP jest wymagany." })
@@ -60,25 +48,24 @@ const resolver = zodResolver(
       .refine((val) => /^[1-9]((\d[1-9])|([1-9]\d))\d{7}$/.test(val), {
         message: "NIP musi być poprawny.",
       }),
-
     krs: z
       .string()
       .refine((val) => val === "" || /^\d{10}$/.test(val), {
         message: "KRS musi mieć dokładnie 10 cyfr lub pozostać pusty",
       })
-      .optional(),
-
+      .nullable(),
     regon: z
       .string()
       .refine((val) => val === "" || /^(\d{14})$/.test(val), {
         message: "REGON musi mieć 14 cyfr lub pozostać pusty",
       })
-      .optional(),
-
-    addressL1: z.string().max(512, { message: "Adres przekracza maksymalny rozmiar." }).optional(),
-
-    addressL2: z.string().max(512, { message: "Adres przekracza maksymalny rozmiar." }).optional(),
-
+      .nullable(),
+    countryCode: z.string().min(2, { message: "Kraj jest wymagany." }),
+    addressL1: z
+      .string()
+      .min(3, { message: "Pierwsza linia adresu musi mieć min. 3 znaki." })
+      .max(512, { message: "Adres przekracza maksymalny rozmiar." }),
+    addressL2: z.string().max(512, { message: "Adres przekracza maksymalny rozmiar." }).nullable(),
     email: z
       .string()
       .refine(
@@ -91,28 +78,25 @@ const resolver = zodResolver(
           message: "Wpisz poprawny e-mail lub pozostaw puste pole.",
         },
       )
-      .optional(),
-
+      .nullable(),
     phoneNumber: z
       .string()
       .max(16, {
         message: "Numer telefonu może zawierać maksymalnie 16 znaków. (Wpisuj bez spacji)",
       })
-      .optional(),
-
+      .nullable(),
+    addressCorrespondanceL1: z
+      .string()
+      .max(512, {
+        message: "Adres przekracza maksymalny rozmiar.",
+      })
+      .nullable(),
     addressCorrespondanceL2: z
       .string()
       .max(512, {
         message: "Adres przekracza maksymalny rozmiar.",
       })
-      .optional(),
-
-    addressCorrespondanceL2: z
-      .string()
-      .max(512, {
-        message: "Adres przekracza maksymalny rozmiar.",
-      })
-      .optional(),
+      .nullable(),
   }),
 );
 
@@ -130,18 +114,60 @@ const getCountryCodesMutation = useMutation({
   },
 });
 
+// reference to the form to expose the validaiton and submit
+// for the parent component
+const formRef = ref();
+
+async function validate() {
+  const result = await formRef.value?.validate();
+  const isValid = !result?.errors || Object.keys(result.errors).length === 0;
+  return isValid;
+}
+
+function reset() {
+  formRef.value.reset();
+}
+
+defineExpose({
+  validate,
+  reset,
+});
+
+// initialization watch
 watch(
   () => props.seller,
   async () => {
     await getCountryCodesMutation.mutateAsync();
     if (props.seller) {
-      resetInitialValues();
-      selectedCountry.value = countries.value.find(
-        (c) => c.code === currentUserStore.getCompanyCountryCode,
-      );
+      formRef.value.states.countryCode.value = countries.value.find(
+        (c) => c.value === currentUserStore.getCompanyCountryCode,
+      )?.value;
+    } else {
+      formRef.value.states.countryCode.value = countries.value.find((c) => c.value === "PL")?.value;
     }
   },
   { immediate: true },
+);
+
+watch(
+  // A watcher that emits the updated values with every change to the form values
+  () => formRef.value?.states,
+  (values) => {
+    emit("update", {
+      name: values.name.value,
+      nip: values.nip.value,
+      krs: emptyToNull(values.krs.value),
+      regon: emptyToNull(values.regon.value),
+      countryCode: values.countryCode.value,
+      addressL1: emptyToNull(values.addressL1.value),
+      addressL2: emptyToNull(values.addressL2.value),
+      addressCorrespondanceL1: emptyToNull(values.addressCorrespondanceL1.value),
+      addressCorrespondanceL2: emptyToNull(values.addressCorrespondanceL2.value),
+      email: emptyToNull(values.email.value),
+      phoneNumber: emptyToNull(values.phoneNumber.value),
+    });
+  },
+  { deep: true },
 );
 </script>
 
@@ -153,18 +179,21 @@ watch(
       </span>
     </template>
 
-    <Form
-      :initialValues="initialValues"
-      :resolver="resolver"
-      class="flex flex-col gap-2 w-full sm:w-100 pb-2"
-    >
+    <Form ref="formRef" :resolver="resolver" class="flex flex-col gap-2 w-full sm:w-100 pb-2">
       <!-- COMPANY NAME -->
-      <FormField v-slot="$field" name="name" class="flex flex-col gap-1">
+      <FormField
+        v-slot="$field"
+        :initialValue="props.seller ? currentUserStore.getCompanyName : ''"
+        name="name"
+        class="flex flex-col gap-1"
+        v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+      >
         <FloatLabel variant="on">
           <InputText
             :readonly="props.seller"
             v-bind="$field.props"
-            v-model="initialValues.name"
+            v-model="$field.value"
+            :disabled="props.disabled"
             id="company_name_input"
             type="text"
             fluid
@@ -178,12 +207,19 @@ watch(
       </FormField>
 
       <!-- NIP -->
-      <FormField v-slot="$field" name="nip" class="flex flex-col gap-1">
+      <FormField
+        v-slot="$field"
+        name="nip"
+        :initialValue="props.seller ? currentUserStore.getCompanyNip : ''"
+        class="flex flex-col gap-1"
+        v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+      >
         <FloatLabel variant="on">
           <InputText
             :readonly="props.seller"
             v-bind="$field.props"
-            v-model="initialValues.nip"
+            v-model="$field.value"
+            :disabled="props.disabled"
             id="company_nip_input"
             type="text"
             fluid
@@ -197,12 +233,19 @@ watch(
       </FormField>
 
       <!-- KRS -->
-      <FormField v-slot="$field" name="krs" class="flex flex-col gap-1">
+      <FormField
+        v-slot="$field"
+        name="krs"
+        :initialValue="props.seller ? currentUserStore.getCompanyKrs : ''"
+        class="flex flex-col gap-1"
+        v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+      >
         <FloatLabel variant="on">
           <InputText
             :readonly="props.seller"
             v-bind="$field.props"
-            v-model="initialValues.krs"
+            v-model="$field.value"
+            :disabled="props.disabled"
             id="company_krs_input"
             type="text"
             fluid
@@ -216,12 +259,19 @@ watch(
       </FormField>
 
       <!-- REGON -->
-      <FormField v-slot="$field" name="regon" class="flex flex-col gap-1">
+      <FormField
+        v-slot="$field"
+        name="regon"
+        :initialValue="props.seller ? currentUserStore.getCompanyRegon : ''"
+        class="flex flex-col gap-1"
+        v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+      >
         <FloatLabel variant="on">
           <InputText
             :readonly="props.seller"
             v-bind="$field.props"
-            v-model="initialValues.regon"
+            v-model="$field.value"
+            :disabled="props.disabled"
             id="company_regon_input"
             type="text"
             fluid
@@ -237,55 +287,72 @@ watch(
       <!-- ADDRESS -->
       <Panel :header="props.seller ? 'Adres sprzedawcy' : 'Adres nabywcy'" toggleable collapsed>
         <div class="flex flex-col gap-2">
-          <Select
-            :disabled="props.seller"
-            v-model="selectedCountry"
-            :options="countries"
-            optionLabel="name"
-            placeholder="Kraj"
-            fluid
+          <!-- COUNTRY -->
+          <FormField
+            v-slot="$field"
+            name="countryCode"
+            :initialValue="props.seller ? currentUserStore.getCompanyCountryCode : 'PL'"
+            v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
           >
-            <template #value="slotProps">
-              <div v-if="slotProps.value" class="flex items-center gap-2">
-                <img
-                  :alt="slotProps.value.name"
-                  :src="`https://flagcdn.com/${slotProps.value.code?.toLowerCase()}.svg`"
-                  style="width: 24px"
-                  loading="lazy"
-                />
+            <Select
+              v-bind="$field.props"
+              :options="countries"
+              :disabled="props.seller || props.disabled"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Kraj"
+              fluid
+            >
+              <template #value="slotProps">
+                <div v-if="slotProps.value" class="flex items-center gap-2">
+                  <img
+                    :alt="slotProps.value.label"
+                    :src="`https://flagcdn.com/${slotProps.value?.toLowerCase()}.svg`"
+                    style="width: 24px"
+                    loading="lazy"
+                  />
 
-                <div>{{ slotProps.value.name }}</div>
-              </div>
+                  <div>{{ countries.find((c) => c.value === slotProps.value)?.label }}</div>
+                </div>
 
-              <span v-else>
-                {{ slotProps.placeholder }}
-              </span>
-            </template>
+                <span v-else>
+                  {{ slotProps.placeholder }}
+                </span>
+              </template>
 
-            <template #option="slotProps">
-              <div class="flex items-center gap-2">
-                <img
-                  :alt="slotProps.option.name"
-                  :src="`https://flagcdn.com/${slotProps.option.code?.toLowerCase()}.svg`"
-                  style="width: 24px"
-                  loading="lazy"
-                />
+              <template #option="slotProps">
+                <div class="flex items-center gap-2">
+                  <img
+                    :alt="slotProps.option.label"
+                    :src="`https://flagcdn.com/${slotProps.option.value?.toLowerCase()}.svg`"
+                    style="width: 24px"
+                    loading="lazy"
+                  />
 
-                <div>{{ slotProps.option.name }}</div>
-              </div>
-            </template>
+                  <div>{{ slotProps.option.label }}</div>
+                </div>
+              </template>
 
-            <template #dropdownicon>
-              <i class="pi pi-map" />
-            </template>
-          </Select>
+              <template #dropdownicon>
+                <i class="pi pi-map" />
+              </template>
+            </Select>
+          </FormField>
 
-          <FormField v-slot="$field" name="addressL1" class="flex flex-col gap-1">
+          <!-- ADDRESS LINE 1 -->
+          <FormField
+            v-slot="$field"
+            :initialValue="props.seller ? currentUserStore.getCompanyAddressL1 : ''"
+            name="addressL1"
+            class="flex flex-col gap-1"
+            v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+          >
             <FloatLabel variant="on">
               <InputText
                 :readonly="props.seller"
                 v-bind="$field.props"
-                v-model="initialValues.addressL1"
+                v-model="$field.value"
+                :disabled="props.disabled"
                 id="address_l1_input"
                 type="text"
                 fluid
@@ -298,12 +365,20 @@ watch(
             </Message>
           </FormField>
 
-          <FormField v-slot="$field" name="addressL2" class="flex flex-col gap-1">
+          <!-- ADDRESS LINE 2 -->
+          <FormField
+            v-slot="$field"
+            :initialValue="props.seller ? currentUserStore.getCompanyAddressL2 : ''"
+            name="addressL2"
+            class="flex flex-col gap-1"
+            v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+          >
             <FloatLabel variant="on">
               <InputText
                 :readonly="props.seller"
                 v-bind="$field.props"
-                v-model="initialValues.addressL2"
+                v-model="$field.value"
+                :disabled="props.disabled"
                 id="address_l2_input"
                 type="text"
                 fluid
@@ -321,48 +396,70 @@ watch(
       <!-- CONTACT -->
       <Panel :header="props.seller ? 'Kontakt sprzedawcy' : 'Kontakt nabywcy'" toggleable collapsed>
         <div class="flex flex-col gap-2">
-          <FormField v-slot="$field" name="email" class="flex flex-col gap-1">
+          <!-- EMAIL -->
+          <FormField
+            v-slot="$field"
+            :initialValue="props.seller ? currentUserStore.getCompanyEmail : ''"
+            name="email"
+            class="flex flex-col gap-1"
+            v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+          >
             <FloatLabel variant="on">
               <InputText
                 :readonly="props.seller"
                 v-bind="$field.props"
-                v-model="initialValues.email"
+                v-model="$field.value"
+                :disabled="props.disabled"
                 id="company_email_input"
                 type="text"
                 fluid
               />
               <label for="company_email_input"> E-mail (Opcjonalnie) </label>
             </FloatLabel>
-
             <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">
               {{ $field.error?.message }}
             </Message>
           </FormField>
 
-          <FormField v-slot="$field" name="phoneNumber" class="flex flex-col gap-1">
+          <!-- PHONE -->
+          <FormField
+            v-slot="$field"
+            :initialValue="props.seller ? currentUserStore.getCompanyPhoneNumber : ''"
+            name="phoneNumber"
+            class="flex flex-col gap-1"
+            v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+          >
             <FloatLabel variant="on">
               <InputText
                 :readonly="props.seller"
                 v-bind="$field.props"
-                v-model="initialValues.phoneNumber"
+                v-model="$field.value"
+                :disabled="props.disabled"
                 id="company_phone_input"
                 type="text"
                 fluid
               />
               <label for="company_phone_input"> Telefon (Opcjonalnie) </label>
             </FloatLabel>
-
             <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">
               {{ $field.error?.message }}
             </Message>
           </FormField>
 
-          <FormField v-slot="$field" name="addressCorrespondanceL1" class="flex flex-col gap-1">
+          <!-- ADDRESS CORRESPONDANCE LINE 2 -->
+          <FormField
+            v-slot="$field"
+            :initialValue="props.seller ? currentUserStore.getCompanyAddressCorrespondanceL1 : ''"
+            name="addressCorrespondanceL1"
+            class="flex flex-col gap-1"
+            v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+          >
             <FloatLabel variant="on">
               <InputText
                 :readonly="props.seller"
                 v-bind="$field.props"
-                v-model="initialValues.addressCorrespondanceL1"
+                v-model="$field.value"
+                :disabled="props.disabled"
                 id="correspondence_address_l1_input"
                 type="text"
                 fluid
@@ -371,18 +468,25 @@ watch(
                 Adres korespondencyjny linia 1 (Opcjonalnie)
               </label>
             </FloatLabel>
-
             <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">
               {{ $field.error?.message }}
             </Message>
           </FormField>
 
-          <FormField v-slot="$field" name="addressCorrespondanceL2" class="flex flex-col gap-1">
+          <!-- ADDRESS CORRESPONDANCE LINE 2 -->
+          <FormField
+            v-slot="$field"
+            :initialValue="props.seller ? currentUserStore.getCompanyAddressCorrespondanceL2 : ''"
+            name="addressCorrespondanceL2"
+            class="flex flex-col gap-1"
+            v-tooltip.top="props.seller ? 'Dane własnej firmy można zmienić w zakładce Firmy' : ''"
+          >
             <FloatLabel variant="on">
               <InputText
                 :readonly="props.seller"
                 v-bind="$field.props"
-                v-model="initialValues.addressCorrespondanceL2"
+                v-model="$field.value"
+                :disabled="props.disabled"
                 id="correspondence_address_l2_input"
                 type="text"
                 fluid

@@ -42,8 +42,8 @@ export const primeVueConfig = {
     preset: customPreset,
     options: {
       prefix: "prime",
-      //   darkModeSelector: ".prime-dark-mode",
-      darkModeSelector: "system",
+      darkModeSelector: ".prime-dark-mode",
+      //   darkModeSelector: "system",
     },
   },
   ripple: true,

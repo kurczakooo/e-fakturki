@@ -37,7 +37,11 @@ const userName = computed(() => currentUserStore.getFullName);
 
     <template #end>
       <div class="flex items-center gap-4">
-        <Select :placeholder="companyName ?? 'Wybierz firmę'" emptyMessage="Brak opcji do wyboru" />
+        <Select
+          :placeholder="companyName ?? 'Wybierz firmę'"
+          emptyMessage="Brak opcji do wyboru"
+          disabled
+        />
         <p>{{ userName ? userName : "Zaloguj się" }}</p>
         <Button icon="pi pi-user" raised rounded @click="toggleUserPopup" />
       </div>

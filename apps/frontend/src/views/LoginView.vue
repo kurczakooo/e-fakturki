@@ -14,7 +14,7 @@ const showKsefCredsForm = ref(false);
 
 function onLogin() {
   showLoginForm.value = false;
-  router.push("/sales");
+  router.push("/new-invoice");
 }
 
 function onRegister() {
@@ -29,7 +29,7 @@ function onAddCompany() {
 
 function onKsefAuthorize() {
   showKsefCredsForm.value = false;
-  router.push("/sales");
+  router.push("/new-invoice");
 }
 </script>
 

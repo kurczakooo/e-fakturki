@@ -13,7 +13,7 @@ import {
 } from "primevue";
 
 import { useCurrentUserStore } from "../stores/currentUserStore";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import type { InvoiceObject, InvoiceEntry } from "../lib/types/invoices";
 import {
   calculateGrossPrice,
@@ -22,6 +22,8 @@ import {
   calculateTaxTotal,
   formatPLN,
   roundTo2,
+  verifyEntriesTotals,
+  verifyInvoiceTotals,
   verifyNetVsGrossPrice,
 } from "../lib/utils";
 import { useMutation } from "@tanstack/vue-query";
@@ -29,12 +31,15 @@ import { getTaxRates } from "../lib/services/productService";
 import type { TaxRate } from "../lib/types/products";
 import InvoiceCreationFooter from "../components/invoices/InvoiceCreationFooter.vue";
 import InvoiceCreationCompanyDataForm from "../components/invoices/InvoiceCreationCompanyDataForm.vue";
-import InvoiceInfoForm from "../components/invoices/InvoiceInfoForm.vue";
+import InvoiceCreationInfoForm from "../components/invoices/InvoiceCreationInfoForm.vue";
 import InvoiceDetails from "../components/invoices/InvoiceDetails.vue";
 import InvoiceCreationPaymentDetails from "../components/invoices/InvoiceCreationPaymentDetails.vue";
+import { saveCreatedInvoice } from "../lib/services/invoiceService.ts";
+import { postInvoiceToKsef } from "../lib/services/ksefService.ts";
 
-const currentUserStore = useCurrentUserStore();
 const toast = useToast();
+const currentUserStore = useCurrentUserStore();
+
 const invoice = ref<InvoiceObject>({
   invoice_number: "",
   invoice_type: "VAT",
@@ -43,20 +48,30 @@ const invoice = ref<InvoiceObject>({
   issue_date: "",
   issue_place: "",
   seller_info: {
-    name: currentUserStore.getCompanyName,
-    nip: currentUserStore.getCompanyNip,
-    address_l1: currentUserStore.getCompanyAddressL1,
-    address_l2: currentUserStore.getCompanyAddressL2,
-    email: currentUserStore.getCompanyEmail,
-    phone: currentUserStore.getCompanyPhoneNumber,
+    name: "",
+    nip: "",
+    krs: "",
+    regon: "",
+    country_code: "",
+    address_l1: "",
+    address_l2: "",
+    address_correspondance_l1: "",
+    address_correspondance_l2: "",
+    email: "",
+    phone_number: "",
   },
   buyer_info: {
     name: "",
     nip: "",
+    krs: "",
+    regon: "",
+    country_code: "",
     address_l1: "",
     address_l2: "",
-    email: null,
-    phone: null,
+    address_correspondance_l1: "",
+    address_correspondance_l2: "",
+    email: "",
+    phone_number: "",
   },
   entries: [],
   currency: "PLN",
@@ -64,38 +79,38 @@ const invoice = ref<InvoiceObject>({
   tax_total: 0,
   gross_total: 0,
   payment: {
-    payment_status: "unpaid",
-    payment_type: "transfer",
+    payment_status: "",
+    payment_type: "",
     payment_date: null,
     payment_due_date: null,
     partial_payments: null,
     seller_bank_account_number: null,
     seller_bank_name: null,
   },
+  id: null,
+  ksef_number: null,
+  invoicing_date: null,
+  acquisition_date: null,
+  permanent_storage_date: null,
+  annotations: null,
+  additional_info: null,
+  footer_info: null,
+  footer_registers: null,
 });
 const invoiceEntryColumns = ref([
-  { field: "delete_row", header: "", width: "width: 5%" },
-  { field: "row_number", header: "Nr. wiersza", width: "width: 5%" },
-  { field: "delivery_date", header: "Dostawa", width: "width: 8%" },
-  { field: "name", header: "Nazwa", width: "width: 17%" },
-  { field: "unit", header: "Jedn. Miary", width: "width: 6%" },
-  { field: "amount", header: "Ilość", width: "width: 6%" },
-  { field: "net_price", header: "Cena netto", width: "width: 8%" },
-  { field: "tax_rate", header: "Stawka VAT", width: "width: 8%" },
-  { field: "gross_price", header: "Cena brutto", width: "width: 8%" },
-  { field: "net_total", header: "Wartość netto", width: "width: 8%" },
-  { field: "tax_total", header: "Wartość VAT", width: "width: 8%" },
-  { field: "gross_total", header: "Wartość brutto", width: "width: 8%" },
+  { field: "delete_row", header: "", width: "width: 5%", readonly: true },
+  { field: "row_number", header: "Nr. wiersza", width: "width: 5%", readonly: true },
+  { field: "delivery_date", header: "Dostawa", width: "width: 8%", readonly: false },
+  { field: "name", header: "Nazwa", width: "width: 17%", readonly: false },
+  { field: "unit", header: "Jedn. Miary", width: "width: 6%", readonly: false },
+  { field: "amount", header: "Ilość", width: "width: 6%", readonly: false },
+  { field: "net_price", header: "Cena netto", width: "width: 8%", readonly: false },
+  { field: "tax_rate", header: "Stawka VAT", width: "width: 8%", readonly: false },
+  { field: "gross_price", header: "Cena brutto", width: "width: 8%", readonly: true },
+  { field: "net_total", header: "Wartość netto", width: "width: 8%", readonly: true },
+  { field: "tax_total", header: "Wartość VAT", width: "width: 8%", readonly: true },
+  { field: "gross_total", header: "Wartość brutto", width: "width: 8%", readonly: true },
 ]);
-
-const readonlyFields = [
-  "delete_row",
-  "row_number",
-  "net_total",
-  "tax_total",
-  "gross_price",
-  "gross_total",
-];
 const taxRates = ref<TaxRate[]>([]);
 const taxRateMap = ref<Map<string, TaxRate>>(new Map());
 const invoicePreviewDialog = ref(false);
@@ -115,6 +130,38 @@ const getTaxRatesMutation = useMutation({
   },
 });
 
+const saveInvoiceMutation = useMutation({
+  mutationFn: async () => {
+    return await saveCreatedInvoice(invoice.value, currentUserStore.getCompanyId);
+  },
+
+  onSuccess: (data) => {
+    toast.add({ severity: "success", summary: "Poprawnie utworzono fakturę.", life: 5000 });
+  },
+
+  onError: (error) => {
+    toast.add({ severity: "error", summary: error.response?.data?.detail, life: 5000 });
+  },
+});
+
+const saveInvoiceandUploadToKsefMutation = useMutation({
+  mutationFn: async () => {
+    return await postInvoiceToKsef(invoice.value, currentUserStore.getCompanyId);
+  },
+
+  onSuccess: (data) => {
+    toast.add({ severity: "success", summary: "Poprawnie wysłano fakturę do KSeF.", life: 5000 });
+  },
+
+  onError: (error) => {
+    toast.add({ severity: "error", summary: error.response?.data?.detail, life: 5000 });
+  },
+});
+
+const formsDisabled = computed(
+  () => saveInvoiceMutation.isPending.value || saveInvoiceandUploadToKsefMutation.isPending.value,
+);
+
 function newEntry() {
   invoice.value?.entries.push({
     row_number: invoice.value?.entries.length + 1,
@@ -124,7 +171,7 @@ function newEntry() {
     unit: "",
     net_price: 0,
     gross_price: 0,
-    tax_rate: taxRates.value[0],
+    tax_rate: taxRates.value[0]?.str_repr,
     net_total: 0,
     tax_total: 0,
     gross_total: 0,
@@ -155,22 +202,52 @@ function onCellEditComplete(event: any) {
   // recalculate individual record prices and totals
   if (field === "net_price" && Number(newValue) > 0) {
     data[field] = roundTo2(Number(newValue));
-    data.gross_price = calculateGrossPrice(data.net_price, data.tax_rate.value);
+    data.gross_price = calculateGrossPrice(
+      data.net_price,
+      taxRateMap.value.get(data.tax_rate)?.value,
+    );
     data.net_total = calculateNetTotal(data.net_price, data.amount);
-    data.tax_total = calculateTaxTotal(data.net_price, data.tax_rate.value, data.amount);
-    data.gross_total = calculateGrossTotal(data.net_price, data.amount, data.tax_rate.value);
+    data.tax_total = calculateTaxTotal(
+      data.net_price,
+      taxRateMap.value.get(data.tax_rate)?.value,
+      data.amount,
+    );
+    data.gross_total = calculateGrossTotal(
+      data.net_price,
+      data.amount,
+      taxRateMap.value.get(data.tax_rate)?.value,
+    );
   }
   if (field === "amount" && Number(newValue) > 0) {
     data[field] = roundTo2(Number(newValue));
     data.net_total = calculateNetTotal(data.net_price, data.amount);
-    data.tax_total = calculateTaxTotal(data.net_price, data.tax_rate.value, data.amount);
-    data.gross_total = calculateGrossTotal(data.net_price, data.amount, data.tax_rate.value);
+    data.tax_total = calculateTaxTotal(
+      data.net_price,
+      taxRateMap.value.get(data.tax_rate)?.value,
+      data.amount,
+    );
+    data.gross_total = calculateGrossTotal(
+      data.net_price,
+      data.amount,
+      taxRateMap.value.get(data.tax_rate)?.value,
+    );
   }
   if (field === "tax_rate") {
     data[field] = newValue;
-    data.gross_price = calculateGrossPrice(data.net_price, data.tax_rate.value);
-    data.tax_total = calculateTaxTotal(data.net_price, data.tax_rate.value, data.amount);
-    data.gross_total = calculateGrossTotal(data.net_price, data.amount, data.tax_rate.value);
+    data.gross_price = calculateGrossPrice(
+      data.net_price,
+      taxRateMap.value.get(data.tax_rate)?.value,
+    );
+    data.tax_total = calculateTaxTotal(
+      data.net_price,
+      taxRateMap.value.get(data.tax_rate)?.value,
+      data.amount,
+    );
+    data.gross_total = calculateGrossTotal(
+      data.net_price,
+      data.amount,
+      taxRateMap.value.get(data.tax_rate)?.value,
+    );
   }
 
   data[field] = newValue;
@@ -196,8 +273,150 @@ function removeInvoiceEntry(entry: InvoiceEntry) {
 function updateInvoiceInfo(event: any) {
   invoice.value.invoice_number = event.invoiceNumber;
   invoice.value.issue_place = event.issuePlace;
-  invoice.value.issue_date = event.invoiceDate.toISOString();
-  console.log(invoice.value);
+  invoice.value.issue_date = event.invoiceDate.toLocaleString();
+}
+
+function updateInvoicePayment(event: any) {
+  invoice.value.payment.payment_status = event.paymentStatus;
+  invoice.value.payment.payment_date = event.paymentDate
+    ? event.paymentDate.toLocaleString()
+    : null;
+  invoice.value.payment.payment_due_date = event.paymentDueDate
+    ? event.paymentDueDate.toLocaleString()
+    : null;
+  invoice.value.payment.payment_type = event.paymentType;
+  invoice.value.payment.seller_bank_account_number = event.iban;
+  invoice.value.payment.seller_bank_name = event.bankName;
+}
+
+function updateInvoiceCompaniesInfo(event: any, company: "buyer" | "seller") {
+  if (company === "buyer") {
+    invoice.value.buyer_info.name = event.name;
+    invoice.value.buyer_info.nip = event.nip;
+    invoice.value.buyer_info.krs = event.krs;
+    invoice.value.buyer_info.regon = event.regon;
+    invoice.value.buyer_info.country_code = event.countryCode;
+    invoice.value.buyer_info.address_l1 = event.addressL1;
+    invoice.value.buyer_info.address_l2 = event.addressL2;
+    invoice.value.buyer_info.address_correspondance_l1 = event.addressCorrespondanceL1;
+    invoice.value.buyer_info.address_correspondance_l2 = event.addressCorrespondanceL2;
+    invoice.value.buyer_info.email = event.email;
+    invoice.value.buyer_info.phone_number = event.phoneNumber;
+  } else {
+    invoice.value.seller_info.name = event.name;
+    invoice.value.seller_info.nip = event.nip;
+    invoice.value.seller_info.krs = event.krs;
+    invoice.value.seller_info.regon = event.regon;
+    invoice.value.seller_info.country_code = event.countryCode;
+    invoice.value.seller_info.address_l1 = event.addressL1;
+    invoice.value.seller_info.address_l2 = event.addressL2;
+    invoice.value.seller_info.address_correspondance_l1 = event.addressCorrespondanceL1;
+    invoice.value.seller_info.address_correspondance_l2 = event.addressCorrespondanceL2;
+    invoice.value.seller_info.email = event.email;
+    invoice.value.seller_info.phone_number = event.phoneNumber;
+  }
+}
+
+const invoiceInfoFormRef = ref();
+const invoiceSellerFormRef = ref();
+const invoiceBuyerFormRef = ref();
+const invoicePaymentFormRef = ref();
+
+function onClearInvoiceData() {
+  invoiceInfoFormRef.value.reset();
+  invoiceSellerFormRef.value.reset();
+  invoiceBuyerFormRef.value.reset();
+  invoicePaymentFormRef.value.reset();
+
+  invoice.value.entries = [];
+  recalculateInvoiceTotals();
+}
+
+async function validate_fields() {
+  // validate all forms
+  const validationResults = await Promise.all([
+    invoiceInfoFormRef.value.validate(),
+    invoiceSellerFormRef.value.validate(),
+    invoiceBuyerFormRef.value.validate(),
+    invoicePaymentFormRef.value.validate(),
+  ]);
+  if (validationResults.some((result) => !result)) {
+    return false;
+  }
+
+  // validate invoice entries
+  // ensure there is at least one invoice entry
+  if (!invoice.value.entries || invoice.value.entries.length === 0) {
+    toast.add({ severity: "error", summary: "Brak pozycji na fakturze.", life: 5000 });
+    return false;
+  }
+
+  // ensure no entry has null/undefined/empty/0/negative values
+  const hasNullValue = invoice.value.entries.some((entry) => {
+    return Object.keys(entry).some(
+      (key) =>
+        entry[key] === null ||
+        entry[key] === undefined ||
+        entry[key] === "" ||
+        entry[key] === 0 ||
+        (Number(entry[key]) && entry[key] < 0),
+    );
+  });
+  if (hasNullValue) {
+    toast.add({
+      severity: "error",
+      summary: "Pozycje na fakturze zawierają puste pola lub nieprawidłowe ceny.",
+      life: 5000,
+    });
+    return false;
+  }
+
+  // ensure every entry is calculated correctly
+  const hasInvalidEntry = invoice.value.entries.some((entry) => {
+    return !(
+      verifyNetVsGrossPrice(
+        entry.net_price,
+        entry.gross_price,
+        taxRateMap.value.get(entry.tax_rate.str_repr)?.value,
+      ) &&
+      verifyEntriesTotals(entry) &&
+      verifyInvoiceTotals(invoice.value)
+    );
+  });
+  if (hasInvalidEntry) {
+    toast.add({
+      severity: "error",
+      summary: "Pozycje na fakturze są błędnie obliczone, spróbuj stworzyć pozycje ponownie.",
+      life: 5000,
+    });
+    return false;
+  }
+
+  return true;
+}
+
+async function onInvoicePreview() {
+  if (!(await validate_fields())) {
+    return;
+  }
+
+  invoicePreviewDialog.value = true;
+}
+
+async function onInvoiceSave() {
+  if (!(await validate_fields())) {
+    return;
+  }
+
+  saveInvoiceMutation.mutate();
+}
+
+async function onInvoiceUploadToKsef() {
+  if (!(await validate_fields())) {
+    return;
+  }
+
+  saveInvoiceandUploadToKsefMutation.mutate();
 }
 
 onMounted(async () => {
@@ -212,18 +431,29 @@ onMounted(async () => {
     <Divider />
   </div>
   <!-- invoice contents -->
-  <Panel class="px-36 h-4/5 flex flex-1 flex-col overflow-y-scroll">
+  <Panel class="px-24 h-826/1000 flex flex-1 flex-col overflow-y-scroll">
     <!-- <div class="gap-4 px-12 h-4/5 overflow-y-scroll"> -->
-    <!-- companies info -->
     <div class="flex flex-1 pb-4 justify-center">
-      <InvoiceInfoForm @update="updateInvoiceInfo" />
+      <InvoiceCreationInfoForm
+        ref="invoiceInfoFormRef"
+        :disabled="formsDisabled"
+        @update="updateInvoiceInfo"
+      />
     </div>
+    <!-- companies info -->
     <div class="flex flex-1 justify-between pb-12">
       <InvoiceCreationCompanyDataForm
+        ref="invoiceSellerFormRef"
         :seller="true"
-        v-tooltip.top="'Dane własnej firmy można zmienić w zakładce Firmy'"
+        :disabled="formsDisabled"
+        @update="updateInvoiceCompaniesInfo($event, 'seller')"
       />
-      <InvoiceCreationCompanyDataForm :seller="false" />
+      <InvoiceCreationCompanyDataForm
+        ref="invoiceBuyerFormRef"
+        :seller="false"
+        :disabled="formsDisabled"
+        @update="updateInvoiceCompaniesInfo($event, 'buyer')"
+      />
     </div>
 
     <!-- invoice entries table -->
@@ -251,7 +481,7 @@ onMounted(async () => {
         :key="col.field"
         :field="col.field"
         :header="col.header"
-        :editor="!readonlyFields.includes(col.field)"
+        :editor="!col.readonly"
         :style="col.width"
       >
         <!-- NORMAL DISPLAY -->
@@ -264,6 +494,7 @@ onMounted(async () => {
               rounded
               raised
               @click="removeInvoiceEntry(data)"
+              :disabled="formsDisabled"
             />
           </div>
 
@@ -273,16 +504,19 @@ onMounted(async () => {
 
           <!-- monetary values -->
           <InputNumber
-            v-else-if="['net_price', 'gross_price'].includes(field)"
+            v-else-if="['net_price'].includes(field)"
             v-model="data[field]"
             mode="currency"
             currency="PLN"
             locale="pl-PL"
             autofocus
             fluid
+            :disabled="formsDisabled"
           />
 
-          <span v-else-if="['net_total', 'tax_total', 'gross_total'].includes(field)">
+          <span
+            v-else-if="['gross_price', 'net_total', 'tax_total', 'gross_total'].includes(field)"
+          >
             {{ formatPLN(data[field]) }}
           </span>
 
@@ -294,56 +528,45 @@ onMounted(async () => {
               fluid
               @click.stop
               @mousedown.stop
+              :disabled="formsDisabled"
             />
           </span>
 
           <!-- tax rate -->
           <span
             v-else-if="field === 'tax_rate'"
-            v-tooltip.bottom="taxRateMap.get(data[field].str_repr)?.hint_text"
-            >{{ taxRateMap.get(data[field].str_repr)?.display_text || data[field] }}</span
+            v-tooltip.bottom="taxRateMap.get(data[field])?.hint_text"
+            >{{ taxRateMap.get(data[field])?.display_text || data[field] }}</span
           >
 
           <!-- default -->
-          <InputText v-else v-model="data[field]" autofocus fluid />
+          <InputText v-else v-model="data[field]" autofocus fluid :disabled="formsDisabled" />
         </template>
 
         <!-- EDIT MODE -->
         <template #editor="{ data, field }">
-          <template
-            v-if="readonlyFields.includes(field) && !['row_number', 'delete_row'].includes(field)"
-          >
-            <span>{{ data[field] }} zł</span>
-          </template>
-          <template v-else-if="field === 'row_number'">
+          <!-- row number -->
+          <template v-if="field === 'row_number'">
             <span>{{ data[field] }}</span>
-          </template>
-          <template v-else-if="field === 'delete_row'">
-            <div class="flex flex-1 justify-center">
-              <Button
-                icon="pi pi-trash"
-                variant="outlined"
-                severity="danger"
-                rounded
-                raised
-                @click="removeInvoiceEntry(data)"
-              />
-            </div>
           </template>
 
           <!-- tax rate -->
           <template v-else-if="field === 'tax_rate'">
             <Select
               v-model="data[field]"
-              :options="taxRates"
+              :options="[...taxRateMap.keys()]"
               class="h-10.5"
               emptyMessage="Brak opcji do wyboru"
               fluid
+              :disabled="formsDisabled"
             >
               <template #value="slotProps">
                 <div v-if="slotProps.value" class="flex items-center gap-2">
-                  <div v-tooltip.bottom="slotProps.value.hint_text" class="flex flex-1">
-                    {{ slotProps.value.display_text }}
+                  <div
+                    v-tooltip.bottom="taxRateMap.get(slotProps.value)?.hint_text"
+                    class="flex flex-1"
+                  >
+                    {{ taxRateMap.get(slotProps.value)?.display_text }}
                   </div>
                 </div>
                 <span v-else>
@@ -352,8 +575,11 @@ onMounted(async () => {
               </template>
               <template #option="slotProps">
                 <div class="flex flex-1 items-center gap-2">
-                  <div v-tooltip.bottom="slotProps.option.hint_text" class="flex flex-1">
-                    {{ slotProps.option.display_text }}
+                  <div
+                    v-tooltip.bottom="taxRateMap.get(slotProps.option)?.hint_text"
+                    class="flex flex-1"
+                  >
+                    {{ taxRateMap.get(slotProps.option)?.display_text }}
                   </div>
                 </div>
               </template>
@@ -368,7 +594,13 @@ onMounted(async () => {
               fluid
               @click.stop
               @mousedown.stop
+              :disabled="formsDisabled"
             />
+          </template>
+
+          <!-- product name -->
+          <template v-else-if="['name', 'unit'].includes(field)">
+            <InputText v-model="data[field]" autofocus fluid :disabled="formsDisabled" />
           </template>
 
           <!-- amount -->
@@ -380,11 +612,12 @@ onMounted(async () => {
               :maxFractionDigits="3"
               autofocus
               fluid
+              :disabled="formsDisabled"
             />
           </template>
 
           <!-- monetary values -->
-          <template v-else-if="['net_price', 'gross_price'].includes(field)">
+          <template v-else-if="['net_price'].includes(field)">
             <InputNumber
               v-model="data[field]"
               mode="currency"
@@ -392,12 +625,13 @@ onMounted(async () => {
               locale="pl-PL"
               autofocus
               fluid
+              :disabled="formsDisabled"
             />
           </template>
 
           <!-- default -->
           <template v-else>
-            <InputText v-model="data[field]" autofocus fluid />
+            <span>{{ formatPLN(data[field]) }}</span>
           </template>
         </template>
 
@@ -411,6 +645,7 @@ onMounted(async () => {
             raised
             v-tooltip.bottom="'Dodaj kolejną pozycję'"
             @click="newEntry"
+            :disabled="formsDisabled"
           ></Button>
 
           <span v-if="col.field === 'gross_price'" class="font-semibold"> SUMA: </span>
@@ -429,7 +664,11 @@ onMounted(async () => {
 
     <!-- payment details -->
     <div class="flex flex-1 justify-between pt-12">
-      <InvoiceCreationPaymentDetails />
+      <InvoiceCreationPaymentDetails
+        ref="invoicePaymentFormRef"
+        :disabled="formsDisabled"
+        @update="updateInvoicePayment"
+      />
       <div>
         <span class="text-xl font-bold">Do zapłaty: </span>
         <span class="text-xl font-bold">{{ formatPLN(invoice?.gross_total || 0) }}</span>
@@ -440,13 +679,18 @@ onMounted(async () => {
   <!-- footer -->
   <div class="mt-3 relative">
     <InvoiceCreationFooter
-      @preview="
-        () => {
-          invoicePreviewDialog = true;
-        }
-      "
+      :disabled="formsDisabled"
+      @preview="onInvoicePreview"
+      @clear="onClearInvoiceData"
+      @save="onInvoiceSave"
+      @save-and-send="onInvoiceUploadToKsef"
     />
   </div>
   <!-- Invoice details dialog -->
-  <InvoiceDetails v-model:visible="invoicePreviewDialog" :invoice="invoice" invoice_type="sales" />
+  <InvoiceDetails
+    v-model:visible="invoicePreviewDialog"
+    :invoice="invoice"
+    invoice_type="sales"
+    :invoice_creation="true"
+  />
 </template>

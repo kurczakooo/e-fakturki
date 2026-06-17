@@ -17,6 +17,7 @@ import DeleteConfirmDialog from "./DeleteConfirmDialog.vue";
 import ProductForm from "../inputs/ProductForm.vue";
 import type { ProductListItem, TaxRate } from "../../lib/types/products";
 import { deleteProduct, getProductsList, getTaxRates } from "../../lib/services/productService";
+import { formatPLN } from "../../lib/utils.ts";
 
 const toast = useToast();
 const currentUserStore = useCurrentUserStore();
@@ -225,7 +226,7 @@ onMounted(() => {
     </Column>
     <Column field="net_price" header="Cena netto" style="width: 10%">
       <template #body="slotProps">
-        <span v-if="slotProps.data.net_price">{{ slotProps.data.net_price }} zł</span>
+        <span v-if="slotProps.data.net_price">{{ formatPLN(slotProps.data.net_price) }} </span>
         <span v-else>-</span>
       </template>
     </Column>
@@ -243,7 +244,7 @@ onMounted(() => {
     </Column>
     <Column field="gross_price" header="Cena brutto" style="width: 10%">
       <template #body="slotProps">
-        <span v-if="slotProps.data.gross_price">{{ slotProps.data.gross_price }} zł</span>
+        <span v-if="slotProps.data.gross_price">{{ formatPLN(slotProps.data.gross_price) }}</span>
         <span v-else>-</span>
       </template>
     </Column>
