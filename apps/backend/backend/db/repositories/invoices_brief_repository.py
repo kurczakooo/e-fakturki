@@ -7,10 +7,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_
 
 from backend.db.mappings.invoice_payment_mappings import PaymentStatus
-from backend.web.api.ksef.schemas import SalesInvoicesRequest
+from backend.schemas.ksef import SalesInvoicesRequest
 from backend.db.models.invoices_brief import InvoicesBriefTable, KsefStatus
 from backend.db.models.invoices_payment import InvoicesPaymentTable
-from backend.web.api.invoices.schemas import InvoicesListResponse, PageInfo
+from backend.schemas.invoices import InvoiceObjectRequest, InvoicesListResponse, PageInfo
 from backend.db.mappings.invoice_details_mappings import parse_date
 
 
@@ -58,11 +58,53 @@ async def insert_invoice_brief_from_ksef(db: AsyncSession, invoice_data: dict) -
         return None
 
 
+async def insert_invoice_brief_form_invoice_object(db: AsyncSession, invoice_data: InvoiceObjectRequest) -> str:
+    """Extract data from InvoiceObjectRequest and insert it into the table."""
+    try:
+        invoice_record = InvoicesBriefTable(
+            ksef_number=None,
+            invoice_number=invoice_data.invoice_number,
+            issue_date=parse_date(invoice_data.issue_date),
+            invoicing_date=parse_date(invoice_data.invoicing_date),
+            acquisition_date=parse_date(invoice_data.acquisition_date),
+            permanent_storage_date=parse_date(invoice_data.permanent_storage_date),
+            ksef_status=invoice_data.ksef_status,
+            ###
+            seller_name=invoice_data.seller_info.name,
+            seller_nip=invoice_data.seller_info.nip,
+            ###
+            buyer_name=invoice_data.buyer_info.name,
+            buyer_nip=invoice_data.buyer_info.nip,
+            ###
+            net_total=invoice_data.net_total,
+            gross_total=invoice_data.gross_total,
+            tax_total=invoice_data.tax_total,
+            currency=invoice_data.currency,
+            ###
+            invoicing_mode=None,
+            invoice_type=invoice_data.invoice_type,
+            ###
+            has_attachment=False,
+            ###
+            is_new=True,
+        )
+
+        db.add(invoice_record)
+        await db.commit()
+        await db.refresh(invoice_record)
+
+        return invoice_record.id
+
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
 async def insert_invoice_brief_batch(
     db: AsyncSession, invoices: list[dict]
 ) -> list[str]:
     """Inserts a batch of invoices into the database."""
-    return [await insert_invoice_brief_from_ksef(db, invoice) for invoice in invoices]
+    return [await insert_invoice_brief_from_ksef(db, invoice) for invoice in invoices["invoices"]]
 
 
 async def get_company_invoices_list(

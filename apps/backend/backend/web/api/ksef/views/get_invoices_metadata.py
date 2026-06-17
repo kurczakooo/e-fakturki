@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from ksef_client import KsefClient, KsefClientOptions
+from ksef_client import KsefClient, KsefClientOptions, models as m
 from ksef_client.exceptions import KsefRateLimitError
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Literal
 
+from backend.db.models.invoices_brief import InvoicesBriefTable
 from backend.db.dependencies import get_db_session
 from backend.db.repositories.company_repository import get_company_nip
 from backend.services.ksef.auth.certificate_auth import (
@@ -27,7 +29,7 @@ router = APIRouter()
 @router.post("/invoices", status_code=200)
 async def get_invoices_list(
     payload: SalesInvoicesRequest,
-    invoice_type: Literal["sales", "purchase"],
+    invoice_type: Literal["sales", "purchases"],
     current_user: UserRead = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_db_session),
 ) -> list[dict]:
@@ -47,21 +49,27 @@ async def get_invoices_list(
     key_path = certificate_str_to_temp_file(company_ksef_certs.private_key)
 
     # paylaod creation
-    request_payload = {
-        "subjectType": "Subject1" if invoice_type == "sales" else "Subject2",
-        "dateRange": {
-            "dateType": "PermanentStorage",
-            "from": to_iso(payload.date_from),
-            "to": to_iso(payload.date_to, end_of_day=True),
-        },
-    }
+    # request_payload = {
+    #     "subjectType": "Subject1" if invoice_type == "sales" else "Subject2",
+    #     "dateRange": {
+    #         "dateType": "PermanentStorage",
+    #         "from": to_iso(payload.date_from),
+    #         "to": to_iso(payload.date_to, end_of_day=True),
+    #     },
+    # }
+
+    request_payload = m.InvoiceQueryFilters(
+        subject_type=m.InvoiceQuerySubjectType("Subject1" if invoice_type == "sales" else "Subject2"),
+        date_range=m.InvoiceQueryDateRange(
+            date_type=m.InvoiceQueryDateType.PERMANENTSTORAGE,
+            from_=to_iso(payload.date_from),
+            to=to_iso(payload.date_to, end_of_day=True),
+        ),
+    )
 
     with KsefClient(KsefClientOptions(base_url=Settings.ksef_environment())) as client:
-        certs = client.security.get_public_key_certificates()
-        sym_cert = next(
-            c["certificate"]
-            for c in certs
-            if "SymmetricKeyEncryption" in (c.get("usage") or [])
+        sym_cert = client.security.get_public_key_certificate_pem(
+            m.PublicKeyCertificateUsage.SYMMETRICKEYENCRYPTION,
         )
         try:
             # authenticate with certs
@@ -85,6 +93,7 @@ async def get_invoices_list(
                 page_size=payload.page_size,
                 sort_order="Desc",
             )
+
         except KsefRateLimitError as e:
             raise HTTPException(
                 status_code=429,
@@ -100,7 +109,7 @@ async def get_invoices_list(
                 remove_temp_file(cert_path)
                 remove_temp_file(key_path)
 
-        invoices = metadata.get("invoices") or metadata.get("invoiceList") or []
+        invoices = metadata.to_dict()
         await insert_invoice_brief_batch(db_session, invoices)
 
-    return invoices
+    return invoices['invoices']

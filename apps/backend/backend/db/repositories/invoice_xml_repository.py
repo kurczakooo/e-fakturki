@@ -5,7 +5,7 @@ from backend.db.models.invoice_xml_snapshots import InvoiceXmlSnapshotsTable
 
 
 async def insert_invoice_xml(
-    db_session: AsyncSession, invoice_id: str, xml: str, sha256_base64: str
+    db_session: AsyncSession, invoice_id: str, xml: str, sha256_base64: str | None
 ) -> None:
     """Inserts invoice XML into the database."""
     stmt = InvoiceXmlSnapshotsTable(

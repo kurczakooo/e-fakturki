@@ -1,5 +1,3 @@
-"""KSeF API."""
-
 from fastapi import APIRouter
 
 from .post_ksef_certificates import router as post_ksef_certificates_router

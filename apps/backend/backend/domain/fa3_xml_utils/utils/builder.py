@@ -30,4 +30,8 @@ class FA3XmlBuilder:
     def build_bytes_xml(self, faktura: fa3utils.Faktura) -> bytes:
         """Build FA3 XML bytes from fa3utils.Faktura object."""
         xml_string = self.serializer.render(faktura)
+
+        if isinstance(xml_string, bytes):
+            return xml_string
+
         return xml_string.encode("utf-8")

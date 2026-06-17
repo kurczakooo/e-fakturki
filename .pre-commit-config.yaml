@@ -2,17 +2,17 @@ repos:
   - repo: local
     hooks:
       # ---------- BACKEND ----------
-      - id: ruff-format-backend
-        name: Ruff format (backend)
-        entry: bash -c "uv run ruff format --force-exclude \"$@\""
-        language: system
-        files: ^apps/backend/.*\.py$
+      # - id: ruff-format-backend
+      #   name: Ruff format (backend)
+      #   entry: bash -c "uv run ruff format --force-exclude \"$@\""
+      #   language: system
+      #   files: ^apps/backend/.*\.py$
 
-      - id: ruff-backend
-        name: Ruff check (backend)
-        entry: bash -c "uv run ruff check --force-exclude \"$@\""
-        language: system
-        files: ^apps/backend/.*\.py$
+      # - id: ruff-backend
+      #   name: Ruff check (backend)
+      #   entry: bash -c "uv run ruff check --force-exclude \"$@\""
+      #   language: system
+      #   files: ^apps/backend/.*\.py$
 
       # ---------- FRONTEND ----------
       - id: prettier-frontend

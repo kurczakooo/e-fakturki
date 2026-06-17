@@ -3,15 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from backend.db.models.companies import CompaniesTable
-from backend.web.api.companies.schemas import (
-    CompaniesListItem,
+from backend.schemas.companies import (
     CompaniesListResponse,
     CompanyCreate,
     CompanyCreateResponse,
-    CompanyUpdate,
-    CompanyDetails,
+    CompanyReadUpdate,
 )
-from backend.web.api.invoices.schemas import PageInfo
+from backend.schemas.common import PageInfo, PaginationRequest
 
 
 async def get_company_nip(db: AsyncSession, company_id: int) -> str:
@@ -21,14 +19,14 @@ async def get_company_nip(db: AsyncSession, company_id: int) -> str:
     return result.scalar_one()
 
 
-async def delete_company_record(db: AsyncSession, company_id: str) -> str:
+async def delete_company_record(db: AsyncSession, company_id: str) -> bool:
     """Delete a company record from the database."""
     stmt = select(CompaniesTable).where(CompaniesTable.id == company_id).limit(1)
     result = await db.execute(stmt)
     company = result.scalar_one()
     await db.delete(company)
     await db.commit()
-    return company_id
+    return True
 
 
 async def get_company_by_user_id(
@@ -38,27 +36,6 @@ async def get_company_by_user_id(
     stmt = select(CompaniesTable).where(CompaniesTable.owner_id == user_id).limit(1)
     result = await db.execute(stmt)
     return result.scalar_one()
-
-
-async def get_company_details_by_id(
-    db: AsyncSession, company_id: int
-) -> CompanyDetails:
-    """Get company details based on company ID."""
-    stmt = (
-        select(
-            CompaniesTable.id,
-            CompaniesTable.krs,
-            CompaniesTable.regon,
-            CompaniesTable.address_correspondance_l1,
-            CompaniesTable.address_correspondance_l2,
-            CompaniesTable.additional_info,
-        )
-        .where(CompaniesTable.id == company_id)
-        .limit(1)
-    )
-    result = await db.execute(stmt)
-    company_details = result.mappings().one_or_none()
-    return CompanyDetails(**company_details)
 
 
 async def insert_new_company(
@@ -71,7 +48,7 @@ async def insert_new_company(
         await db.commit()
         await db.refresh(company)
 
-        return CompanyCreateResponse(user_id=company.owner_id, company_id=company.id)
+        return CompanyCreateResponse(owner_id=company.owner_id, id=company.id)
 
     except IntegrityError:
         await db.rollback()
@@ -79,8 +56,8 @@ async def insert_new_company(
 
 
 async def update_company_data(
-    db: AsyncSession, payload: CompanyUpdate
-) -> CompanyUpdate | None:
+    db: AsyncSession, payload: CompanyReadUpdate
+) -> CompanyCreateResponse | None:
     """Update a company record in the database."""
     try:
         await db.execute(
@@ -103,7 +80,7 @@ async def update_company_data(
         )
 
         await db.commit()
-        return payload.id
+        return CompanyCreateResponse(owner_id=payload.owner_id, id=payload.id)
 
     except IntegrityError:
         await db.rollback()
@@ -111,7 +88,7 @@ async def update_company_data(
 
 
 async def get_companies_list_paginated(
-    db: AsyncSession, search_string: str | None, page_size: int, page_offset: int
+    db: AsyncSession, pagination: PaginationRequest
 ) -> list[CompaniesListResponse]:
     """Get a paginated list of company records."""
 
@@ -119,42 +96,37 @@ async def get_companies_list_paginated(
     total_items = await db.execute(select(func.count(CompaniesTable.id)))
     total_items = total_items.scalar()
 
-    # get the companies
-    companies = await db.execute(
-        select(
-            CompaniesTable.id,
-            CompaniesTable.owner_id,
-            CompaniesTable.name,
-            CompaniesTable.nip,
-            CompaniesTable.country_code,
-            CompaniesTable.address_l1,
-            CompaniesTable.address_l2,
-            CompaniesTable.email,
-            CompaniesTable.phone_number,
-        )
-        .where(
+    query = select(CompaniesTable)
+    if pagination.search_string:
+        query = query.where(
             or_(
-                CompaniesTable.name.contains(search_string),
-                CompaniesTable.nip.contains(search_string),
-                CompaniesTable.address_l1.contains(search_string),
-                CompaniesTable.address_l2.contains(search_string),
-                CompaniesTable.email.contains(search_string),
-                CompaniesTable.phone_number.contains(search_string),
+                CompaniesTable.name.contains(pagination.search_string),
+                CompaniesTable.nip.contains(pagination.search_string),
+                CompaniesTable.address_l1.contains(pagination.search_string),
+                CompaniesTable.address_l2.contains(pagination.search_string),
+                CompaniesTable.email.contains(pagination.search_string),
+                CompaniesTable.phone_number.contains(pagination.search_string),
             )
         )
-        .offset(page_offset)
-        .limit(page_size)
+    query = (
+        query.offset(pagination.page_offset)
+        .limit(pagination.page_size)
         .order_by(CompaniesTable.name)
     )
-    companies = [CompaniesListItem(**company) for company in companies.mappings().all()]
+    result = await db.execute(query)
+    companies = [
+        CompanyReadUpdate.model_validate(company) for company in result.scalars().all()
+    ]
 
     # prepare page info
     page_info = PageInfo(
-        current_page=(page_offset // page_size) + 1 if total_items > 0 else 1,
-        page_size=page_size,
+        current_page=(pagination.page_offset // pagination.page_size) + 1
+        if total_items > 0
+        else 1,
+        page_size=pagination.page_size,
         total_items=total_items,
-        has_next_page=(page_offset + page_size) < total_items,
-        has_previous_page=page_offset > 0,
+        has_next_page=(pagination.page_offset + pagination.page_size) < total_items,
+        has_previous_page=pagination.page_offset > 0,
     )
 
     return CompaniesListResponse(companies=companies, page_info=page_info)

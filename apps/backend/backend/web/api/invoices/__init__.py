@@ -1,5 +1,3 @@
-"""Invoices API."""
-
-from backend.web.api.products.views import router
+from backend.web.api.invoices.views import router
 
 __all__ = ["router"]

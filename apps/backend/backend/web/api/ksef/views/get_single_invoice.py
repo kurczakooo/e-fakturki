@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Path, HTTPException
-from ksef_client import KsefClient, KsefClientOptions
+from ksef_client import KsefClient, KsefClientOptions, models as m
 from ksef_client.exceptions import KsefRateLimitError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,11 +70,8 @@ async def download_invoice_from_ksef(
         raise HTTPException(status_code=404, detail="Invoice not found") from e
 
     with KsefClient(KsefClientOptions(base_url=Settings.ksef_environment())) as client:
-        certs = client.security.get_public_key_certificates()
-        sym_cert = next(
-            c["certificate"]
-            for c in certs
-            if "SymmetricKeyEncryption" in (c.get("usage") or [])
+        sym_cert = client.security.get_public_key_certificate_pem(
+            m.PublicKeyCertificateUsage.SYMMETRICKEYENCRYPTION,
         )
         try:
             # authenticate with certs

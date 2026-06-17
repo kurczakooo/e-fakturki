@@ -144,7 +144,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=48.0.0" },
     { name = "fastapi", specifier = ">=0.122.0,<1" },
     { name = "httptools", specifier = ">=0.7.1,<1" },
-    { name = "ksef-client", specifier = ">=0.3.1" },
+    { name = "ksef-client", specifier = ">=0.14.0" },
     { name = "lxml", specifier = ">=6.0.2" },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3.0" },
     { name = "pydantic", specifier = ">=2.12.5,<3" },
@@ -576,15 +576,15 @@ wheels = [
 
 [[package]]
 name = "ksef-client"
-version = "0.3.1"
+version = "0.15.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "httpx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/51/3fc21834793bf88de1be7c0b3aa270a8833448c80e3132c59b19b78bb1d0/ksef_client-0.3.1.tar.gz", hash = "sha256:cdca63448986ae6c068869005a0c4c96ed98e48659853b5cc32b42cc5c879b2e", size = 60671, upload-time = "2026-01-18T17:48:56.511Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/5a/1be8432d91c4337f30b8262cf7f00872e402b5ab874897a8a5e2774e89e8/ksef_client-0.15.0.tar.gz", hash = "sha256:24c2aa276ed9bba12a73ab061723e7c43b104e45545fcda5f832db6b6eaa1a1a", size = 240644, upload-time = "2026-06-15T06:22:40.094Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/23/70/8610d1fcfeff442997106d1f7c2c3735ef7144b57d9deb023e3fcfaf0ec3/ksef_client-0.3.1-py3-none-any.whl", hash = "sha256:39f3c0f1f461719613c1352309c66002ab7c627a25073ad2517b1e72f9ec5784", size = 48905, upload-time = "2026-01-18T17:48:54.727Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/9b/a678514d21a9aed421ac32e8f27b96965b4be2d13dd158fee24ecb1ad471/ksef_client-0.15.0-py3-none-any.whl", hash = "sha256:8e1be15642c6594c15b28d85e501aa043428d54aff3a776d765eed04052d673c", size = 202936, upload-time = "2026-06-15T06:22:38.472Z" },
 ]
 
 [[package]]

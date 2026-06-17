@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 from backend.domain.fa3_xml_utils.models.schemat import TstawkaPodatku
-from backend.schemas.invoices import PageInfo
+from backend.schemas.common import PageInfo
 
 
 class ProductCreate(BaseModel):
@@ -17,8 +17,8 @@ class ProductCreate(BaseModel):
 
     unit: str | None = Field(None, description="Unit of measurement (e.g. pcs, kg)")
 
-    net_price: float = Field(..., description="Net price (without tax)")
-    tax_rate: str = Field(..., description="Tax rate in percent (e.g. 23)")
+    net_price: float | None = Field(None, description="Net price (without tax)")
+    tax_rate: str | None = Field(None, description="Tax rate in percent (e.g. 23)")
     gross_price: float | None = Field(
         None,
         description="Gross price (with tax). If not provided, it will be calculated automatically",
@@ -30,6 +30,12 @@ class ProductCreateResponse(BaseModel):
 
     id: str = Field(..., description="ID of the product record")
     company_id: str = Field(..., description="ID of the company that owns the product")
+
+
+class ProductUpdate(ProductCreate):
+    """Schema for updating a product."""
+
+    id: str = Field(..., description="Product ID.")
 
 
 class ProductListItem(BaseModel):

@@ -1,19 +1,26 @@
-"""Auth API services."""
-
 from pwdlib import PasswordHash
 import jwt
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
-from pydantic import ValidationError
+from pydantic import ValidationError, SecretStr
 from datetime import datetime, timedelta, timezone
+from fastapi.security import OAuth2PasswordBearer
 
-from backend.web.api.auth.schemas import UserRead
+from backend.schemas.auth import UserRead
 from backend.db.models.users import UsersTable
 from fastapi import Depends, HTTPException, status
-from backend.web.api.auth.schemas import TokenData
+from backend.schemas.auth import TokenData, TokenType
 from backend.db.dependencies import get_db_session
 from backend.settings import settings
+
+
+SECRET_KEY: SecretStr = settings.JWT_SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_MINUTES
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", scheme_name="JWT")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -30,23 +37,41 @@ def create_access_token(data: TokenData, expires_delta: timedelta | None = None)
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(
-            minutes=settings.access_token_expire_minutes
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
-    to_encode["exp"] = int(expire.timestamp())
+    to_encode.update({"exp": expire, "token_type": TokenType.ACCESS})
 
-    return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.algorithm)
+    return jwt.encode(to_encode, SECRET_KEY.get_secret_value(), algorithm=ALGORITHM)
+
+
+# def create_refresh_token(
+#     data: TokenData, expires_delta: timedelta | None = None
+# ) -> str:
+#     """Create a JWT refresh token with the given data and expiration."""
+#     to_encode = data.model_dump()
+
+#     if expires_delta:
+#         expire = datetime.now(timezone.utc) + expires_delta
+#     else:
+#         expire = datetime.now(timezone.utc) + timedelta(
+#             minutes=REFRESH_TOKEN_EXPIRE_DAYS
+#         )
+
+#     to_encode.update({"exp": expire, "token_type": TokenType.REFRESH})
+
+#     return jwt.encode(to_encode, SECRET_KEY.get_secret_value(), algorithm=ALGORITHM)
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(settings.oauth2_scheme)],
+    token: Annotated[str, Depends(oauth2_scheme)],
     db_session: AsyncSession = Depends(get_db_session),
 ) -> UserRead:
     """Get the current user from the JWT token."""
 
     try:
         payload = jwt.decode(
-            token, settings.jwt_secret_key, algorithms=[settings.algorithm]
+            token, SECRET_KEY.get_secret_value(), algorithms=[ALGORITHM]
         )
 
         token_data = TokenData.model_validate(payload)

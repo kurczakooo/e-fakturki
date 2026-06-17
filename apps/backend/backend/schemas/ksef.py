@@ -49,7 +49,7 @@ class KsefInvoiceUploadStatus(BaseModel):
         ..., description="The ID of the invoice that was uploaded to KSeF."
     )
 
-    ksef_status: str = Field(
+    ksef_status: int = Field(
         ...,
         description="The status of the invoice in KSeF, e.g. 'pending', 'accepted', 'rejected'.",
     )

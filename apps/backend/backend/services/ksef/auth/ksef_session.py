@@ -9,13 +9,21 @@ class EncryptionData(BaseModel):
     """Schema needed for type hinting of encryption data used in ksef session."""
 
 
-class KsefSessionParams(BaseModel):
-    """Parameters needed to run a ksef session."""
+# class KsefSessionParams(BaseModel):
+#     """Parameters needed to run a ksef session."""
 
+#     workflow: OnlineSessionWorkflow
+#     session: OnlineSessionResult
+
+#     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+from dataclasses import dataclass
+
+@dataclass
+class KsefSessionParams:
+    """Parameters needed to run a ksef session."""
     workflow: OnlineSessionWorkflow
     session: OnlineSessionResult
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 def open_ksef_session(

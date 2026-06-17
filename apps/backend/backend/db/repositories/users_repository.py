@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.models.users import UsersTable
-from backend.web.api.auth.schemas import UserCreate
+from backend.schemas.auth import UserCreate
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> UsersTable | None:
@@ -20,7 +20,6 @@ async def create_new_user_record(
         last_name=payload.last_name,
         email=payload.email,
         password=payload.password,
-        is_active=True,
     )
 
     db.add(user)

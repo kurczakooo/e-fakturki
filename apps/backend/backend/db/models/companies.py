@@ -45,5 +45,4 @@ class CompaniesTable(Base):
 
     owner = relationship("UsersTable", back_populates="companies")
     products = relationship("ProductsTable", back_populates="company")
-    categories = relationship("CategoriesTable", back_populates="company")
     ksef_credentials = relationship("KsefCredentialsTable", back_populates="company")

@@ -18,6 +18,6 @@ class InvoiceXmlSnapshotsTable(Base):
     )
 
     xml: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    sha256_base64: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    sha256_base64: Mapped[str] = mapped_column(String, nullable=True, unique=True)
 
     invoice = relationship("InvoicesBriefTable", back_populates="invoice_xml_snapshots")

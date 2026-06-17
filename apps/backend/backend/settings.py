@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     ENCRYPTION_SECRET_KEY: SecretStr
 
     # Current environment
-    environment: str = "prod"
+    environment: str = "dev"
 
     # auth
     JWT_SECRET_KEY: SecretStr

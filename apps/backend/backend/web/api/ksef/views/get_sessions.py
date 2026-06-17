@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Path
-from ksef_client import KsefClient, KsefClientOptions
+from ksef_client import KsefClient, KsefClientOptions, models as m
 from ksef_client.exceptions import KsefRateLimitError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +28,7 @@ async def get_invoices_list(
     ),
     current_user: UserRead = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_db_session),
-) -> dict:
+) -> list[m.SessionsQueryResponseItem]:
     """Get the list of KSeF sessions."""
 
     # load needed company data for the upload, including NIP and certs
@@ -41,11 +41,8 @@ async def get_invoices_list(
     key_path = certificate_str_to_temp_file(company_ksef_certs.private_key)
 
     with KsefClient(KsefClientOptions(base_url=Settings.ksef_environment())) as client:
-        certs = client.security.get_public_key_certificates()
-        sym_cert = next(
-            c["certificate"]
-            for c in certs
-            if "SymmetricKeyEncryption" in (c.get("usage") or [])
+        sym_cert = client.security.get_public_key_certificate_pem(
+            m.PublicKeyCertificateUsage.SYMMETRICKEYENCRYPTION,
         )
         try:
             # authenticate with certs
@@ -83,4 +80,4 @@ async def get_invoices_list(
                 remove_temp_file(cert_path)
                 remove_temp_file(key_path)
 
-    return sessions_metadata
+    return sessions_metadata.sessions

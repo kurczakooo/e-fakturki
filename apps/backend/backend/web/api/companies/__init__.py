@@ -1,5 +1,3 @@
-"""Companies API."""
-
-from backend.web.api.products.views import router
+from backend.web.api.companies.views import router
 
 __all__ = ["router"]

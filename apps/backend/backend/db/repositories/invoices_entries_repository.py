@@ -1,11 +1,13 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel
-from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
+from backend.db.mappings.invoice_details_mappings import parse_date
+from backend.schemas.invoices import InvoiceEntry, InvoiceObjectRequest
 from backend.db.models.invoice_entries import InvoiceEntriesTable
 from backend.db.mappings.invoices_entries_mappings import (
     map_fa3_fawiersz_to_invoice_entries_table,
+    parse_tax_rate,
 )
 import backend.domain.fa3_xml_utils.models.schemat as fa3utils
 
@@ -25,20 +27,43 @@ async def insert_invoice_entries(
     return [entry.id for entry in invoice_entries]
 
 
-class InvoiceEntry(BaseModel):
-    """Response model for invoice list entry."""
+async def insert_invoice_entries_from_invoice_object(
+    db: AsyncSession, invoice_data: InvoiceObjectRequest, invoice_id: str
+) -> str | None:
+    """Extract data from InvoiceObjectRequest and insert it into the table."""
+    try:
+        invoice_entries = []
 
-    row_number: int
-    delivery_date: str | datetime | None
-    name: str
-    amount: float
-    unit: str
-    net_price: float | None
-    gross_price: float | None
-    net_total: float | None
-    tax_rate: int
-    tax_total: float | None
-    gross_total: float | None
+        for entry in invoice_data.entries:
+            invoice_entries_record = InvoiceEntriesTable(
+                invoice_id=invoice_id,
+                row_number=entry.row_number,
+                uu_id=None,
+                gtin=None,
+                delivery_date=parse_date(entry.delivery_date),
+                name=entry.name,
+                index=None,
+                amount=entry.amount,
+                unit=entry.unit,
+                net_price=entry.net_price,
+                gross_price=entry.gross_price,
+                discount=None,
+                net_total=entry.net_total,
+                tax_rate=parse_tax_rate(entry.tax_rate),
+                tax_total=entry.tax_total,
+                gross_total=entry.gross_total,
+            )
+
+            db.add(invoice_entries_record)
+            await db.commit()
+            await db.refresh(invoice_entries_record)
+            invoice_entries.append(invoice_entries_record)
+
+        return [entry.id for entry in invoice_entries]
+
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
 async def get_invoice_entries_by_invoice_id(
