@@ -455,7 +455,7 @@ watch(
       <Divider />
 
       <!-- additional info -->
-      <div class="flex-1 flex flex-col gap-4">
+      <!-- <div class="flex-1 flex flex-col gap-4">
         <div class="flex-1 flex flex-col">
           <span>Adnotacje: </span>
           <span class="font-semibold">
@@ -477,7 +477,7 @@ watch(
             {{ invoiceData.footer_info || "-" }}
           </span>
         </div>
-      </div>
+      </div> -->
     </div>
 
     <template #footer v-if="invoiceData">

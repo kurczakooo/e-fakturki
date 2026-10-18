@@ -10,12 +10,12 @@ const items = ref([
   {
     label: "Faktury",
     items: [
-      {
-        label: "Nowa Faktura",
-        icon: "pi pi-plus",
-        route: "/new-invoice",
-        disabled: false,
-      },
+      // {
+      //   label: "Nowa Faktura",
+      //   icon: "pi pi-plus",
+      //   route: "/new-invoice",
+      //   disabled: false,
+      // },
       {
         label: "Sprzedaż",
         icon: "pi pi-shop",
@@ -31,6 +31,23 @@ const items = ref([
     ],
   },
   {
+    label: "Statystyki",
+    items: [
+      {
+        label: "Rozliczenia miesięczne",
+        icon: "pi pi-calculator",
+        route: "/cashflow",
+        disabled: false,
+      },
+      {
+        label: "KOBiZE",
+        icon: "pi pi-car",
+        route: "/kobize",
+        disabled: true,
+      },
+    ],
+  },
+  {
     label: "Firma",
     items: [
       {
@@ -40,7 +57,7 @@ const items = ref([
         disabled: false,
       },
       {
-        label: "Firmy",
+        label: "Kontrahenci",
         icon: "pi pi-user",
         route: "/companies",
         disabled: false,

@@ -34,3 +34,59 @@ body {
   height: 100%;
   min-height: 0;
 }
+
+/* Month segment button styles light theme */
+.p-button.month-segment {
+  color: #3f3f46;
+  border-color: #e4e4e7;
+}
+
+.p-button.month-segment:not(:disabled):hover {
+  background-color: #f4f4f5;
+  color: #3f3f46;
+  border-color: #e4e4e7;
+  font-weight: 600;
+}
+
+.p-button.month-segment.month-segment-selected {
+  background-color: #f4f4f5;
+}
+
+/* Month segment button styles dark theme */
+.prime-dark-mode .p-button.month-segment {
+  background-color: var(--color-neutral-900);
+  color: #ffffff;
+  border-color: var(--color-neutral-700);
+}
+
+.prime-dark-mode .p-button.month-segment.month-segment-selected {
+  background-color: var(--color-neutral-900);
+  color: #ffffff;
+  border-color: #e4e4e7;
+
+}
+
+.prime-dark-mode .p-button.month-segment:not(:disabled):hover {
+  background-color: var(--color-neutral-900);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+
+/* PRIME VUE style for DIV grey */
+.p-div-grey {
+  border-radius: 14px;
+  padding: 1rem;
+  background-color: #f4f4f5;
+  /* box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); */
+  border: 1px solid #e4e4e7;
+}
+
+/* PRIME VUE style for DIV white */
+.p-div-white {
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: #ffffff;
+  /* box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); */
+  border: 1px solid #e4e4e7;
+}

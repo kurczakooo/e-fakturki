@@ -6,6 +6,8 @@ import PurchasesView from "../views/PurchasesView.vue";
 import ProductsView from "../views/ProductsView.vue";
 import CompaniesView from "../views/CompaniesView.vue";
 import SettingsView from "../views/SettingsView.vue";
+import CashflowView from "../views/CashflowView.vue";
+import KobizeView from "../views/KobizeView.vue";
 import { useCurrentUserStore } from "../stores/currentUserStore";
 
 const router = createRouter({
@@ -46,6 +48,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: "/cashflow",
+      name: "cashflow",
+      component: CashflowView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/kobize",
+      name: "kobize",
+      component: KobizeView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: "/companies",
       name: "companies",
       component: CompaniesView,
@@ -68,7 +82,7 @@ router.beforeEach(async (to) => {
     return { name: "login" };
   }
   if (to.name === "login" && token) {
-    return { name: "new-invoice" };
+    return { name: "cashflow" };
   }
 });
 
