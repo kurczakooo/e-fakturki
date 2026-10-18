@@ -75,6 +75,7 @@ async def lifespan_setup(
     """
 
     app.middleware_stack = None
+    settings.db_file.parent.mkdir(parents=True, exist_ok=True)
     _setup_db(app)
     await _create_tables()
 

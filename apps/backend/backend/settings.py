@@ -1,14 +1,10 @@
 import enum
 from pathlib import Path
-from tempfile import gettempdir
 from pydantic import SecretStr
 
 from ksef_client import KsefEnvironment
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-TEMP_DIR = Path(gettempdir())
-
 
 class LogLevel(enum.StrEnum):
     """Possible log levels."""
@@ -40,7 +36,7 @@ class Settings(BaseSettings):
     ENCRYPTION_SECRET_KEY: SecretStr
 
     # Current environment
-    environment: str = "dev"
+    environment: str = "prod"
 
     # auth
     JWT_SECRET_KEY: SecretStr
@@ -59,7 +55,7 @@ class Settings(BaseSettings):
 
     log_level: LogLevel = LogLevel.INFO
     # Variables for the database
-    db_file: Path = TEMP_DIR / "db.sqlite3"
+    db_file: Path = Path(__file__).resolve().parents[1] / "data" / "db.sqlite3"
     db_echo: bool = False
 
     @property
